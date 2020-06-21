@@ -37,4 +37,25 @@
     - outstanding orders
     - issues
 
-    
+
+### Service provider sign up logic
+
+- registration_service
+- is_active: false
+- admin_acceptance
+- email_prompt
+
+
+### user sign up
+
+- user_registration_service
+- email_confirmation
+
+# Views
+
+- sign_up
+- login
+- authentication
+- profile
+- list_services
+- request_service
