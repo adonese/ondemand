@@ -1,11 +1,16 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/adonese/noebs/apigateway"
+)
 
 
 
 func login(w http.ResponseWriter, r *http.Request){
 
+	gateway.GenerateJWTWithClaim(username string, secret []byte, tk gateway.TokenClaims)
 }
 
 func home(w http.ResponseWriter, r *http.Request){
