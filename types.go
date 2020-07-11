@@ -1,7 +1,7 @@
 package main
 
 
-type error struct {
+type errorHandler struct {
 	Message string `json:"message"`
 	Code string `json:"code"`
 }
