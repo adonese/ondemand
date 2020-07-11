@@ -59,3 +59,46 @@
 - profile
 - list_services
 - request_service
+
+
+# orders
+
+- list_orders
+- order_status
+- made_by
+- to_whom
+- date
+
+
+# database models
+
+## User profile
+
+- username
+- is_admin
+- is_service_provider
+- firstname
+- lastname
+- birthday
+- location (gps) optional
+- address
+- on_job (for service provider)
+
+## services (lookup table)
+
+- service_name
+- service_id
+
+## orders
+
+- user
+- service_id
+- service_provider_id
+- is_completed
+- user_rating
+- service_provider_rating
+- order_id
+
+## order criteria
+
+- geolocation fetch for nearest available user
