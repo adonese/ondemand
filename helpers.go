@@ -1,6 +1,10 @@
 package main
 
-import "github.com/jmoiron/sqlx"
+import (
+	"net/http"
+
+	"github.com/jmoiron/sqlx"
+)
 
 
 func getDB(filename string) (*sqlx.DB, error) {
@@ -9,4 +13,12 @@ func getDB(filename string) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+
+func Auth(next http.Handler) http.Handler{
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+		next.ServeHTTP(w, r)
+	})
+	 
 }

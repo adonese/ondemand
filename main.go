@@ -1,5 +1,7 @@
 package main
 
+import "net/http"
+
 
 
 
@@ -15,6 +17,7 @@ create table users (
 
 
 func main(){
-
+	mux := http.NewServeMux()
+	mux.Handle("/", Auth(http.HandlerFunc(login)))
 }
 
