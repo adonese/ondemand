@@ -10,28 +10,30 @@ create table users (
 	id integer primary key,
 	username text unique,
 	mobile text unique,
-	is_provider bool default false,
+	is_provider integer not null default 0,
 	password text,
-	verification_number text
+	verification_number text,
+	created_at DATE DEFAULT (datetime('now','localtime'))
 );
-
 
 create table services (
 	id integer primary key,
-	name text,
+	name text
 );
 
 create table orders (
 	id integer primary key,
 	user_id integer,
 	provider_id integer,
-	status bool
+	status integer not null default 0,
+	created_at DATE DEFAULT (datetime('now','localtime'))
 );
 
 create table issues (
 	id integer primary key,
-	is_resolved bool,
-	order_id integer
+	is_resolved integer not null default 0,
+	order_id integer,
+	created_at DATE DEFAULT (datetime('now','localtime'))
 );
 `
 
@@ -62,7 +64,7 @@ func main(){
 	mux.Handle("/services", http.HandlerFunc(s.getHandler))
 	mux.Handle("/new_order", http.HandlerFunc(o.saveHandler))
 	mux.Handle("/orders", http.HandlerFunc(o.getOrdersHandler))
-	mux.Handle("/orders/status", nil)
+	// mux.Handle("/orders/status")
 	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
 

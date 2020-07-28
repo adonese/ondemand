@@ -1,16 +1,19 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 
 func getDB(filename string) (*sqlx.DB, error) {
 	db, err := sqlx.Connect("sqlite3", filename)
 	if err != nil {
+		log.Printf("Error in db: %v", err)
 		return nil, err
 	}
 	return db, nil

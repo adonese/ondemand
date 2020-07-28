@@ -234,7 +234,7 @@ type User struct {
 }
 
 func (u *User)generatePassword(password string) error{
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 8)
 	u.Password = string(hash)
 	return err
 }
@@ -244,39 +244,13 @@ func (u *User)verifyPassword(hash, password string)error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
-func (u *User)login(w http.ResponseWriter, r *http.Request){
-	defer r.Body.Close()
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
-	unmarshal(b, u)
-	pass := u.Password
-	if err := u.getUser(u.Username); err != nil {
-		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
-	if err := u.verifyPassword(u.Password, pass); err != nil {
-		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
-	w.Write(marshal(u))
 
-}
 
 func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
-
 	tx := u.db.MustBegin()
-	tx.NamedExec("insert into users(username, mobile) values(:username, :mobile)", u)
+	tx.NamedExec("insert into users(username, mobile, password) values(:username, :mobile, :password)", u)
 	if err := tx.Commit(); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
@@ -319,7 +293,6 @@ func (u *User)getProvidersHandler(w http.ResponseWriter, r *http.Request){
 	w.Write(marshal(users))
 }
 
-
 func (u *User)getUserHandler(w http.ResponseWriter, r *http.Request){
 
 	err := u.getUser(r.URL.Query().Get("id"))
@@ -333,6 +306,35 @@ func (u *User)getUserHandler(w http.ResponseWriter, r *http.Request){
 	w.Write(marshal(u))
 }
 
+func (u *User)login(w http.ResponseWriter, r *http.Request){
+	defer r.Body.Close()
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	unmarshal(b, u)
+	pass := u.Password
+	log.Printf("User model is: %#v", u)
+	if err := u.getUser(u.Username); err != nil {
+		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	log.Printf("Passwords are: %v, %v", u.Password, pass)
+	if err := u.verifyPassword(u.Password, pass); err != nil {
+		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	w.Write(marshal(u))
+
+}
+
 func (u *User)registerHandler(w http.ResponseWriter, r *http.Request){
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -343,6 +345,7 @@ func (u *User)registerHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	unmarshal(b, u)
+	u.generatePassword(u.Password)
 	err = u.saveUser()
 	if err != nil {
 		vErr := errorHandler{Code: "db_error", Message: err.Error()}
