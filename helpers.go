@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -21,4 +22,9 @@ func Auth(next http.Handler) http.Handler{
 		next.ServeHTTP(w, r)
 	})
 	 
+}
+
+func toInt(s string)int{
+	d, _ := strconv.Atoi(s)
+	return d
 }
