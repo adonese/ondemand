@@ -11,6 +11,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const  (
+	NA = iota
+	Pending
+	Accepted
+	Rejected
+
+)
 
 type errorHandler struct {
 	Message string `json:"message"`
@@ -22,13 +29,24 @@ func (e errorHandler)toJson()[]byte{
 	return d
 }
 
+func unmarshal(b []byte, v interface{}) error{
+	return json.Unmarshal(b, v)
+}
+
+func marshal(o interface{})[]byte{
+	d, _ := json.Marshal(&o)
+	return d
+}
+
+
 type Service struct {
 	ID int `json:"id" db:"id"`
 	Name string `json:"name" db:"name"`
 	db *sqlx.DB
+	
 }
 
-func (c *Service) get(id int) ([]Service, error) {
+func (c *Service) get() ([]Service, error) {
 	var services []Service
 
 	c.db.Exec(stmt)
@@ -36,6 +54,18 @@ func (c *Service) get(id int) ([]Service, error) {
 		return nil, err
 	}
 	return services, nil
+}
+
+func (c *Service)getHandler(w http.ResponseWriter, r *http.Request){
+	service, err := c.get()
+	if err != nil {
+	vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write(vErr.toJson())
+	return
+	}
+
+	w.Write(marshal(service))
 }
 
 func (c *Service) save() (error) {
@@ -50,24 +80,6 @@ func (c *Service) save() (error) {
 	return nil
 
 }
-
-func unmarshal(b []byte, v interface{}) error{
-	return json.Unmarshal(b, v)
-}
-
-func marshal(o interface{})[]byte{
-	d, _ := json.Marshal(&o)
-	return d
-}
-
-
-const  (
-	NA = iota
-	Pending
-	Accepted
-	Rejected
-
-)
 
 type Order struct {
 	ID int `json:"id" db:"id"`
@@ -115,7 +127,6 @@ func (c *Order)saveHandler(w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(http.StatusCreated)
 	}
 }
-
 
 func (c *Order)getOrdersHandler(w http.ResponseWriter, r *http.Request){
 
@@ -170,7 +181,7 @@ func (c *Issue) save() (error) {
 
 }
 
-func (c *Issue) get(id int) ([]Issue, error) {
+func (c *Issue) get() ([]Issue, error) {
 	var issues []Issue
 
 	c.db.Exec(stmt)
@@ -178,6 +189,36 @@ func (c *Issue) get(id int) ([]Issue, error) {
 		return nil, err
 	}
 	return issues, nil
+}
+
+func (c *Issue)getIssuesHandler(w http.ResponseWriter, r *http.Request){
+	i, err := c.get()
+	if err != nil {
+	vErr := errorHandler{Code: "issue_not_found", Message: err.Error()}
+	w.WriteHeader(http.StatusBadRequest)
+	w.Write(vErr.toJson())
+	return
+	}
+	w.Write(marshal(&i))
+}
+
+func (c *Issue)createIssueHandler(w http.ResponseWriter, r *http.Request){
+	defer r.Body.Close()
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	unmarshal(b, c)
+	if err := c.save(); err != nil {
+		vErr := errorHandler{Code: "db_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 // User struct in the system
