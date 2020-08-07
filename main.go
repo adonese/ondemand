@@ -68,6 +68,6 @@ func main(){
 	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
 
-	http.ListenAndServe(":8080", mux)
+	http.ListenAndServe(":6662", mux)
 }
 
