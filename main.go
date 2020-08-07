@@ -62,6 +62,7 @@ func main(){
 	mux.Handle("/login", http.HandlerFunc(u.login))
 	mux.Handle("/register", http.HandlerFunc(u.registerHandler))
 	mux.Handle("/services", http.HandlerFunc(s.getHandler))
+	mux.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))
 	mux.Handle("/new_order", http.HandlerFunc(o.saveHandler))
 	mux.Handle("/orders", http.HandlerFunc(o.getOrdersHandler))
 	// mux.Handle("/orders/status")
