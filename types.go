@@ -402,7 +402,9 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	},
 }
 
-	res, _ := json.Marshal(data)
+	mData := make(map[string][]Provider)
+	mData["result"] = data
+	res, _ := json.Marshal(mData)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("content-type", "application/json")
 	w.Write(res)
