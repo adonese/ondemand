@@ -68,15 +68,19 @@ func (c *Service)getHandler(w http.ResponseWriter, r *http.Request){
         'تست',
     ]}
 	*/
-	ts := []string{"تكييف",
+	svcs := []string{"تكييف",
 	"اعمال جبسية و اسقف",
 	"مكافحة الحشرات و القوارض",
 	"كهرباء",
 	"ارضيات وباركية",
 	"تنسيق الأشجار",
 	"تست",}
-	res, _ := json.Marshal(&ts)
+
+	maps := make(map[string][]string)
+	maps["result"] = svcs
+	res, _ := json.Marshal(maps)
 	w.WriteHeader(http.StatusOK)
+	w.Header().Add("content-type", "application/json")
 	w.Write(res)
 	return
 	service, err := c.all()
