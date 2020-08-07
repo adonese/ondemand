@@ -46,7 +46,7 @@ type Service struct {
 	
 }
 
-func (c *Service) get() ([]Service, error) {
+func (c *Service) all() ([]Service, error) {
 	var services []Service
 
 	c.db.Exec(stmt)
@@ -57,7 +57,29 @@ func (c *Service) get() ([]Service, error) {
 }
 
 func (c *Service)getHandler(w http.ResponseWriter, r *http.Request){
-	service, err := c.get()
+	/*
+	{[
+        'تكييف',
+        'اعمال جبسية و اسقف',
+        'مكافحة الحشرات و القوارض',
+        'كهرباء',
+        'ارضيات وباركية',
+        'تنسيق الأشجار',
+        'تست',
+    ]}
+	*/
+	ts := []string{"تكييف",
+	"اعمال جبسية و اسقف",
+	"مكافحة الحشرات و القوارض",
+	"كهرباء",
+	"ارضيات وباركية",
+	"تنسيق الأشجار",
+	"تست",}
+	res, _ := json.Marshal(&ts)
+	w.WriteHeader(http.StatusOK)
+	w.Write(res)
+	return
+	service, err := c.all()
 	if err != nil {
 	vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
 	w.WriteHeader(http.StatusBadRequest)
@@ -80,6 +102,20 @@ func (c *Service) save() (error) {
 	return nil
 
 }
+
+func (c *Service) populateTest() (error) {
+
+	c.db.Exec(stmt)
+	tx := c.db.MustBegin()
+	tx.Exec("insert into services(name) values(:name)", c)
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error in cart.save: TX: %v", err)
+		return err
+	}
+	return nil
+
+}
+
 
 type Order struct {
 	ID int `json:"id" db:"id"`
