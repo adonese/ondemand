@@ -42,6 +42,7 @@ var (
 	o Order
 	i Issue
 	s Service
+	p Provider
 )
 
 var db, _ = getDB("test.db")
@@ -52,6 +53,7 @@ func init(){
 	o.db = db
 	i.db = db
 	s.db = db
+	p.db = db
 }
 
 func main(){
@@ -66,6 +68,7 @@ func main(){
 	mux.Handle("/new_order", http.HandlerFunc(o.saveHandler))
 	mux.Handle("/orders", http.HandlerFunc(o.getOrdersHandler))
 	mux.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
+	mux.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
 	// mux.Handle("/orders/status")
 	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))

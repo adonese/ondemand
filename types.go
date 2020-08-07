@@ -375,6 +375,50 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(users))
 }
 
+type Provider struct {
+	Name string `json:"name" db:"name"`
+	ID int `json:"id" db:"id"`
+	Score int `json:"score" db:"score"`
+	db *sqlx.DB
+}
+
+func (p *Provider) getProviders() ([]User, error) {
+	var users []User
+	tx := p.db.MustBegin()
+
+	tx.Get(&users, "select * from users where is_provider = 1")
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return users, err
+	}
+	return users, nil
+}
+
+func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
+	data := []Provider{{
+		ID: 12, Name: "Mohamed Ahmed", Score: 1,
+	},{
+		ID: 1, Name: "Ahmed Abdalla", Score: 23,
+	},
+}
+
+	res, _ := json.Marshal(data)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("content-type", "application/json")
+	w.Write(res)
+	return
+	
+	users, err := p.getProviders()
+	if err != nil {
+		vErr := errorHandler{Code: "not_found", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(users))
+}
+
 func (u *User) getUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := u.getUser(r.URL.Query().Get("id"))
