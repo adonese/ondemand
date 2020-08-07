@@ -91,6 +91,7 @@ func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(service))
 }
 
+
 func (c *Service) serviceDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 			{[
@@ -211,6 +212,19 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(orders))
+}
+
+func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
+	/*
+	todo marshall and then return id (for tracking and further inquiries)
+	*/
+	maps := make(map[string]string)
+	maps["result"] = "request_created"
+	res, _ := json.Marshal(maps)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("content-type", "application/json")
+	w.Write(res)
+	return
 }
 
 type Getter interface {
