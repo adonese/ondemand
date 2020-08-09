@@ -314,7 +314,7 @@ type User struct {
 	db                 *sqlx.DB
 	CreatedAt          sql.NullTime `db:"created_at" json:"created_at"`
 	Password           string       `db:"password" json:"password"`
-	VerificationNumber string       `db:"verification_number" json:"verification_number"`
+	VerificationNumber sql.NullString       `db:"verification_number" json:"verification_number"`
 	IsProvider         bool         `db:"is_provider" json:"is_provider"`
 }
 
@@ -331,9 +331,9 @@ func (u *User) verifyPassword(hash, password string) error {
 func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
-	tx := u.db.MustBegin()
-	tx.NamedExec("insert into users(username, mobile, password) values(:username, :mobile, :password)", u)
-	if err := tx.Commit(); err != nil {
+	
+	if _, err := u.db.NamedExec("insert into users(username, mobile, password) values(:username, :mobile, :password)", u)
+	err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
@@ -341,10 +341,9 @@ func (u *User) saveUser() error {
 }
 
 func (u *User) getUser(username string) error {
-
-	tx := u.db.MustBegin()
-	tx.Get(u, "select * from users where username = $1", username)
-	if err := tx.Commit(); err != nil {
+	
+	//TODO update all queries to use Get for single result and select from multiple results
+	if err := u.db.Get(u, "select * from users where username = $1", username); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
