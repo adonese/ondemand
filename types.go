@@ -23,6 +23,11 @@ const (
 	Rejected
 )
 
+type Pagination struct {
+	Count int `json:"count"`
+	Result interface{} `json:"result"`
+}
+
 type errorHandler struct {
 	Message string `json:"message"`
 	Code    string `json:"code"`
@@ -228,6 +233,9 @@ func (c *Order) saveHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
+	/*
+	{"count": 12, "result": [{order_id, provider_id, order,}]}
+	*/
 	orders, err := c.get(toInt(r.URL.Query().Get("id")))
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -235,9 +243,12 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+
+	res := Pagination{Count: len(orders), Result: orders}
 	w.WriteHeader(http.StatusOK)
-	w.Write(marshal(orders))
+	w.Write(marshal(res))
 }
+
 
 func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 	/*
@@ -401,6 +412,7 @@ func (c *Issue) createIssueHandler(w http.ResponseWriter, r *http.Request) {
 type User struct {
 	ID                 int    `db:"id" json:"id"`
 	Username           string `db:"username" json:"username"`
+	Fullname string `db:"fullname" json:"fullname"`
 	Mobile             string `db:"mobile" json:"mobile"`
 	db                 *sqlx.DB
 	CreatedAt          sql.NullTime `db:"created_at" json:"created_at"`
@@ -423,7 +435,7 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 	
-	if _, err := u.db.NamedExec("insert into users(username, mobile, password) values(:username, :mobile, :password)", u)
+	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname) values(:username, :mobile, :password, :fullname)", u)
 	err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
@@ -472,7 +484,7 @@ type Provider struct {
 	db *sqlx.DB
 }
 
-func (p *Provider) getProviders() ([]User, error) {
+func (p *Provider) getProviders(id int) ([]User, error) {
 	var users []User
 	tx := p.db.MustBegin()
 
@@ -500,6 +512,7 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	w.Write(res)
 	return
 	
+	//TODO fix me
 	users, err := p.getProviders()
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}

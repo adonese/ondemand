@@ -9,6 +9,7 @@ var stmt = `
 create table users (
 	id integer primary key,
 	username text unique,
+	fullname text not null,
 	mobile text unique,
 	is_provider integer not null default 0,
 	password text,
