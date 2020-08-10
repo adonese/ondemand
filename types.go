@@ -6,10 +6,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type genericMap = map[string]string
+type result = map[string]interface{}
 
 const (
 	NA = iota
@@ -160,8 +165,19 @@ type Order struct {
 	ProviderID int  `json:"provider_id" db:"provider_id"`
 	Status     bool `json:"status" db:"status"`
 	CreatedAt  sql.NullTime
+	OrderUUID string `json:"uuid" db:"uuid"`
 	db         *sqlx.DB
 }
+
+func (c *Order)verify()bool{
+	return true
+}
+
+func (c *Order)token()string{
+	c.OrderUUID = uuid.New().String()
+	return c.OrderUUID
+}
+
 
 func (c *Order) get(id int) ([]Order, error) {
 	var services []Order
@@ -173,11 +189,20 @@ func (c *Order) get(id int) ([]Order, error) {
 	return services, nil
 }
 
+func (c *Order) setProvider() ([]Order, error) {
+	var services []Order
+
+	c.db.Exec(stmt)
+	if _, err := c.db.NamedExec("Update orders set provider_id = :provider where uuid = :id", map[string]interface{}{"provider": c.ProviderID, "id": c.OrderUUID}); err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
 func (c *Order) save() error {
 	c.db.Exec(stmt)
-	tx := c.db.MustBegin()
-	tx.NamedExec("insert into orders(user_id, created_at, provider_id, status) values(:user_id, :created_at, :provider_id, :status)", c)
-	if err := tx.Commit(); err != nil {
+	
+	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuis) values(:user_id, :created_at, :provider_id, :status, :uuid)", c); err != nil {
 		log.Printf("Error in cart.save: TX: %v", err)
 		return err
 	}
@@ -218,13 +243,79 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 	/*
 	todo marshall and then return id (for tracking and further inquiries)
 	*/
-	maps := make(map[string]string)
-	maps["result"] = "request_created"
-	res, _ := json.Marshal(maps)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Add("content-type", "application/json")
-	w.Write(res)
-	return
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+		defer r.Body.Close()
+	
+		err = json.Unmarshal(body, c)
+		if err != nil {
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+		if ok := c.verify(); !ok {
+			res := errorHandler{Code: "db_err", Message: "Error in db"}
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(marshal(&res))
+			return
+		}
+		t := c.token()
+		c.save()
+		maps := make(map[string]genericMap)
+		tt := genericMap{
+			"uuid": t,
+			"time": time.Now().String(),
+		}
+		maps["result"] = tt
+		res, _ := json.Marshal(maps)
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("content-type", "application/json")
+		w.Write(res)
+		return
+
+	
+}
+
+func (c *Order)updateOrder(w http.ResponseWriter, r *http.Request){
+	/*
+	todo marshall and then return id (for tracking and further inquiries)
+	*/
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+		defer r.Body.Close()
+	
+		err = json.Unmarshal(body, c)
+		if err != nil {
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+
+		if c.OrderUUID == "" || c.ProviderID == 0{
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+		c.setProvider()
+		w.WriteHeader(http.StatusOK)
+		
+		res := result{
+			"result": c,
+		}
+		w.Write(marshal(res))
 }
 
 type Getter interface {
