@@ -169,7 +169,7 @@ type Order struct {
 	UserID     int  `json:"user_id" db:"user_id"`
 	ProviderID int  `json:"provider_id" db:"provider_id"`
 	Status     bool `json:"status" db:"status"`
-	CreatedAt  sql.NullTime
+	CreatedAt  sql.NullTime `db:"created_at"`
 	OrderUUID string `json:"uuid" db:"uuid"`
 	db         *sqlx.DB
 }
@@ -502,26 +502,26 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	},{
 		ID: 1, Name: "Ahmed Abdalla", Score: 23,
 	},
-}
+	}
 
 	mData := make(map[string][]Provider)
 	mData["result"] = data
-	res, _ := json.Marshal(mData)
+	
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("content-type", "application/json")
-	w.Write(res)
+	w.Write(marshal(mData))
 	return
 	
 	//TODO fix me
-	users, err := p.getProviders()
-	if err != nil {
-		vErr := errorHandler{Code: "not_found", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(marshal(users))
+	// users, err := p.getProviders()
+	// if err != nil {
+	// 	vErr := errorHandler{Code: "not_found", Message: err.Error()}
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	w.Write(vErr.toJson())
+	// 	return
+	// }
+	// w.WriteHeader(http.StatusOK)
+	// w.Write(marshal(users))
 }
 
 func (u *User) getUserHandler(w http.ResponseWriter, r *http.Request) {
