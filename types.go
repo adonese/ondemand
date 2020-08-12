@@ -314,9 +314,43 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 		res, _ := json.Marshal(maps)
 		w.WriteHeader(http.StatusOK)
 		w.Write(res)
+	
+}
 
+func (c *Order)setProviderHandler(w http.ResponseWriter, r *http.Request){
+	/*
+	todo marshall and then return id (for tracking and further inquiries)
+	*/
+
+	w.Header().Add("content-type", "application/json")
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+	defer r.Body.Close()
+
+	err = json.Unmarshal(body, c)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
 	
-	
+		res, err := c.setProvider()
+		if err != nil {
+			res := errorHandler{Code: "bad_request", Message: "Error in request"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(&res))
+			return
+		}
+			
+			w.WriteHeader(http.StatusOK)
+			w.Write(marshal(res))
+			return
 }
 
 func (c *Order)updateOrder(w http.ResponseWriter, r *http.Request){
@@ -504,18 +538,15 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type Provider struct {
-	Name string `json:"name" db:"name"`
-	ID int `json:"id" db:"id"`
 	Score int `json:"score" db:"score"`
 	db *sqlx.DB
+	User
 }
 
-func (p *Provider) getProviders(id int) ([]User, error) {
-	var users []User
-	tx := p.db.MustBegin()
+func (p *Provider) getProviders() ([]Provider, error) {
+	var users []Provider
 
-	tx.Get(&users, "select * from users where is_provider = 1")
-	if err := tx.Commit(); err != nil {
+	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil{
 		log.Printf("Error in DB: %v", err)
 		return users, err
 	}
@@ -523,11 +554,12 @@ func (p *Provider) getProviders(id int) ([]User, error) {
 }
 
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
-	data := []Provider{{
-		ID: 12, Name: "Mohamed Ahmed", Score: 1,
-	},{
-		ID: 1, Name: "Ahmed Abdalla", Score: 23,
-	},
+	data, err := p.getProviders()
+	if err != nil {
+		vErr := errorHandler{Code: "not_found", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
 	}
 
 	mData := make(map[string][]Provider)
@@ -537,17 +569,6 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	w.Header().Add("content-type", "application/json")
 	w.Write(marshal(mData))
 	return
-	
-	//TODO fix me
-	// users, err := p.getProviders()
-	// if err != nil {
-	// 	vErr := errorHandler{Code: "not_found", Message: err.Error()}
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	w.Write(vErr.toJson())
-	// 	return
-	// }
-	// w.WriteHeader(http.StatusOK)
-	// w.Write(marshal(users))
 }
 
 func (u *User) getUserHandler(w http.ResponseWriter, r *http.Request) {
