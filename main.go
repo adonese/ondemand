@@ -28,6 +28,7 @@ create table orders (
 	provider_id integer,
 	status integer not null default 0,
 	uuid text,
+	order_status integer default 0,
 	created_at DATE DEFAULT (datetime('now','localtime'))
 );
 

@@ -169,7 +169,7 @@ type Order struct {
 	UserID     int  `json:"user_id" db:"user_id"`
 	ProviderID int  `json:"provider_id" db:"provider_id"`
 	Status     bool `json:"status" db:"status"`
-	CreatedAt  sql.NullTime `db:"created_at"`
+	CreatedAt  sql.NullTime `db:"created_at" json:"created_at"`
 	OrderUUID string `json:"uuid" db:"uuid"`
 	db         *sqlx.DB
 }
@@ -189,6 +189,16 @@ func (c *Order) get(id int) ([]Order, error) {
 
 	c.db.Exec(stmt)
 	if err := c.db.Select(&services, "select * from orders"); err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
+func (c *Order) getByUUID() ([]Order, error) {
+	var services []Order
+
+	c.db.Exec(stmt)
+	if _, err := c.db.NamedExec("Update orders set status = :status where uuid = :id", map[string]interface{}{"status": c.Status, "id": c.OrderUUID}); err != nil {
 		return nil, err
 	}
 	return services, nil
@@ -254,22 +264,35 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 	/*
 	todo marshall and then return id (for tracking and further inquiries)
 	*/
-		body, err := ioutil.ReadAll(r.Body)
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+	defer r.Body.Close()
+
+	err = json.Unmarshal(body, c)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+	if r.Method == "PUT"{
+
+		_, err := c.getByUUID()
 		if err != nil {
 			res := errorHandler{Code: "bad_request", Message: "Error in request"}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(marshal(&res))
 			return
 		}
-		defer r.Body.Close()
-	
-		err = json.Unmarshal(body, c)
-		if err != nil {
-			res := errorHandler{Code: "bad_request", Message: "Error in request"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(marshal(&res))
-			return
-		}
+
+
+	}else{
 		if ok := c.verify(); !ok {
 			res := errorHandler{Code: "db_err", Message: "Error in db"}
 			w.WriteHeader(http.StatusInternalServerError)
@@ -289,7 +312,7 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 		w.Header().Add("content-type", "application/json")
 		w.Write(res)
 		return
-
+	}
 	
 }
 
