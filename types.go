@@ -172,6 +172,7 @@ type Order struct {
 	CreatedAt  sql.NullTime `db:"created_at" json:"created_at"`
 	OrderUUID string `json:"uuid" db:"uuid"`
 	db         *sqlx.DB
+	IsPending bool `json:"is_pending" db:"is_pending"`
 }
 
 func (c *Order)verify()bool{
