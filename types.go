@@ -194,11 +194,12 @@ func (c *Order) get(id int) ([]Order, error) {
 	return services, nil
 }
 
-func (c *Order) getByUUID() ([]Order, error) {
+func (c *Order) updateUUID() ([]Order, error) {
 	var services []Order
 
 	c.db.Exec(stmt)
 	if _, err := c.db.NamedExec("Update orders set status = :status where uuid = :id", map[string]interface{}{"status": c.Status, "id": c.OrderUUID}); err != nil {
+		log.Printf("Error in updateUUID: %v", err)
 		return nil, err
 	}
 	return services, nil
@@ -217,7 +218,7 @@ func (c *Order) setProvider() ([]Order, error) {
 func (c *Order) save() error {
 	c.db.Exec(stmt)
 	
-	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuis) values(:user_id, :created_at, :provider_id, :status, :uuid)", c); err != nil {
+	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid) values(:user_id, :created_at, :provider_id, :status, :uuid)", c); err != nil {
 		log.Printf("Error in cart.save: TX: %v", err)
 		return err
 	}
@@ -265,6 +266,7 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 	todo marshall and then return id (for tracking and further inquiries)
 	*/
 
+	w.Header().Add("content-type", "application/json")
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -282,17 +284,18 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	if r.Method == "PUT"{
-
-		_, err := c.getByUUID()
+		res, err := c.updateUUID()
 		if err != nil {
 			res := errorHandler{Code: "bad_request", Message: "Error in request"}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(marshal(&res))
 			return
 		}
-
-
-	}else{
+			
+			w.WriteHeader(http.StatusOK)
+			w.Write(marshal(res))
+			return
+	}
 		if ok := c.verify(); !ok {
 			res := errorHandler{Code: "db_err", Message: "Error in db"}
 			w.WriteHeader(http.StatusInternalServerError)
@@ -309,10 +312,9 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 		maps["result"] = tt
 		res, _ := json.Marshal(maps)
 		w.WriteHeader(http.StatusOK)
-		w.Header().Add("content-type", "application/json")
 		w.Write(res)
-		return
-	}
+
+	
 	
 }
 
