@@ -284,6 +284,7 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 		w.Write(marshal(&res))
 		return
 	}
+
 	if r.Method == "PUT"{
 		res, err := c.updateUUID()
 		if err != nil {
@@ -297,23 +298,26 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 			w.Write(marshal(res))
 			return
 	}
-		if ok := c.verify(); !ok {
-			res := errorHandler{Code: "db_err", Message: "Error in db"}
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write(marshal(&res))
-			return
-		}
-		t := c.token()
-		c.save()
-		maps := make(map[string]genericMap)
-		tt := genericMap{
-			"uuid": t,
-			"time": time.Now().String(),
-		}
-		maps["result"] = tt
-		res, _ := json.Marshal(maps)
-		w.WriteHeader(http.StatusOK)
-		w.Write(res)
+	// user_id, uuid
+	// user_id, provider_id, uuid
+	// user_id, provider_id, uuid
+	if ok := c.verify(); !ok {
+		res := errorHandler{Code: "db_err", Message: "Error in db"}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(marshal(&res))
+		return
+	}
+	t := c.token()
+	c.save()
+	maps := make(map[string]genericMap)
+	tt := genericMap{
+		"uuid": t,
+		"time": time.Now().String(),
+	}
+	maps["result"] = tt
+	res, _ := json.Marshal(maps)
+	w.WriteHeader(http.StatusOK)
+	w.Write(res)
 	
 }
 
@@ -348,6 +352,12 @@ func (c *Order)setProviderHandler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 			
+		maps := make(map[string][]Order)
+		maps["result"] = res
+
+		d, _ := json.Marshal(maps)
+		w.WriteHeader(http.StatusOK)
+		w.Write(d)
 			w.WriteHeader(http.StatusOK)
 			w.Write(marshal(res))
 			return
