@@ -199,7 +199,7 @@ func (c *Order) updateUUID() ([]Order, error) {
 	var services []Order
 
 	c.db.Exec(stmt)
-	if _, err := c.db.NamedExec("Update orders set status = :status where uuid = :id", map[string]interface{}{"status": c.Status, "id": c.OrderUUID}); err != nil {
+	if _, err := c.db.NamedExec("Update orders set status = :status, is_pending = :is_pending where uuid = :id", map[string]interface{}{"status": c.Status, "id": c.OrderUUID, "is_pending": c.IsPending}); err != nil {
 		log.Printf("Error in updateUUID: %v", err)
 		return nil, err
 	}
