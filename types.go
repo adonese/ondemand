@@ -352,15 +352,9 @@ func (c *Order)setProviderHandler(w http.ResponseWriter, r *http.Request){
 			return
 		}
 			
-		maps := make(map[string][]Order)
-		maps["result"] = res
-
-		d, _ := json.Marshal(maps)
 		w.WriteHeader(http.StatusOK)
-		w.Write(d)
-			w.WriteHeader(http.StatusOK)
-			w.Write(marshal(res))
-			return
+		w.Write(marshal(res))
+		return
 }
 
 func (c *Order)updateOrder(w http.ResponseWriter, r *http.Request){
