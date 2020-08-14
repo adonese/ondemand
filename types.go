@@ -173,6 +173,8 @@ type Order struct {
 	OrderUUID string `json:"uuid" db:"uuid"`
 	db         *sqlx.DB
 	IsPending bool `json:"is_pending" db:"is_pending"`
+	Description string `json:"description" db:"description"`
+	Category int `json:"category" db:"category"`
 }
 
 func (c *Order)verify()bool{
