@@ -558,6 +558,7 @@ func (p *Provider) getProviders() ([]Provider, error) {
 }
 
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
 	data, err := p.getProviders()
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -570,7 +571,7 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	mData["result"] = data
 	
 	w.WriteHeader(http.StatusOK)
-	w.Header().Add("content-type", "application/json")
+	
 	w.Write(marshal(mData))
 	return
 }
