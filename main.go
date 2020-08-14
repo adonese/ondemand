@@ -39,6 +39,15 @@ create table issues (
 	order_id integer,
 	created_at DATE DEFAULT (datetime('now','localtime'))
 );
+
+
+create table userservices(
+	user_id integer not null,
+	service_id integer not null,
+	FOREIGN key (user_id) REFERENCES users(id),
+	FOREIGN key (service_id) REFERENCES services(id),
+	unique(user_id, service_id)
+	);
 `
 
 var (

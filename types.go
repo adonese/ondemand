@@ -522,6 +522,8 @@ type User struct {
 	Password           string       `db:"password" json:"password"`
 	VerificationNumber *string       `db:"verification_number" json:"verification_number"`
 	IsProvider         bool         `db:"is_provider" json:"is_provider"`
+	Services []int `json:"services"`
+	
 }
 
 func (u *User) generatePassword(password string) error {
@@ -538,11 +540,39 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 	
+	
 	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u)
 	err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
+	return nil
+}
+
+func (u *User) saveUserTX() error {
+
+	u.db.Exec(stmt)
+	
+	tx := u.db.MustBegin()
+	rr, err := tx.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	for _, v := range u.Services{
+		id, _ := rr.LastInsertId()
+	
+		if _, err := tx.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider)", map[string]interface{}{"user": id, "provider": v}); err != nil {
+			tx.Rollback()
+			return err
+		}
+
+	}
+	if err := tx.Commit(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -667,13 +697,35 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	unmarshal(b, u)
 	u.generatePassword(u.Password)
-	err = u.saveUser()
-	if err != nil {
-		vErr := errorHandler{Code: "db_error", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
+
+	if u.IsProvider{
+		if err := u.saveUserTX(); err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+	}else{
+		err = u.saveUser()
+		if err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(u))
 		return
 	}
+
+	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(u))
 	return
+}
+
+func (u *User)saveProviders(user int, provider int)error{
+	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider", map[string]interface{}{"user": user, "provider": provider}); err != nil {
+		return err
+	}
+	return nil
 }
