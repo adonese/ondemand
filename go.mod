@@ -6,6 +6,6 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.0
-	golang.org/dl v0.0.0-20200811212135-d149fc5456ff // indirect
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de
+	google.golang.org/appengine v1.6.6 // indirect
 )

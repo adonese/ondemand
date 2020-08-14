@@ -499,7 +499,7 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 	
-	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname) values(:username, :mobile, :password, :fullname)", u)
+	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u)
 	err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
@@ -618,6 +618,8 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
