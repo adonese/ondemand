@@ -200,6 +200,26 @@ func (c *Order) get(id int) ([]Order, error) {
 	return services, nil
 }
 
+func (c *Order) getProviders(id int) ([]Order, error) {
+	var services []Order
+
+	c.db.Exec(stmt)
+	if err := c.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
+func (c *Order) getUsers(id int) ([]Order, error) {
+	var services []Order
+
+	c.db.Exec(stmt)
+	if err := c.db.Select(&services, "select * from orders where user_id = ?", id); err != nil {
+		return nil, err
+	}
+	return services, nil
+}
+
 func (c *Order) updateUUID() ([]Order, error) {
 	var services []Order
 
@@ -253,14 +273,28 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 	{"count": 12, "result": [{order_id, provider_id, order,}]}
 	*/
-	orders, err := c.get(toInt(r.URL.Query().Get("id")))
-	if err != nil {
-		vErr := errorHandler{Code: "not_found", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
+	var orders []Order
+	var err error
+	id := r.URL.Query().Get("id")
+	userID := r.URL.Query().Get("user_id")
 
+	if  id != "" {
+		orders, err = c.getProviders(toInt(id))
+		if err != nil {
+			vErr := errorHandler{Code: "not_found", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+	}else if userID != "" {
+		orders, err = c.getUsers(toInt(userID))
+		if err != nil {
+			vErr := errorHandler{Code: "not_found", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+	}
 	res := Pagination{Count: len(orders), Result: orders}
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(res))
