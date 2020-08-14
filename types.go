@@ -219,7 +219,7 @@ func (c *Order) setProvider() ([]Order, error) {
 func (c *Order) save() error {
 	c.db.Exec(stmt)
 	
-	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid) values(:user_id, :created_at, :provider_id, :status, :uuid)", c); err != nil {
+	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid, description, category) values(:user_id, :created_at, :provider_id, :status, :uuid, description, category)", c); err != nil {
 		log.Printf("Error in cart.save: TX: %v", err)
 		return err
 	}
@@ -237,7 +237,7 @@ func (c *Order) saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unmarshal(b, c)
-	if c.UserID != 0 || c.ProviderID != 0 {
+	if c.UserID != 0 {
 		c.save()
 		w.WriteHeader(http.StatusCreated)
 	}
