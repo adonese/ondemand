@@ -479,9 +479,9 @@ type User struct {
 	Fullname *string `db:"fullname" json:"fullname"`
 	Mobile             string `db:"mobile" json:"mobile"`
 	db                 *sqlx.DB
-	CreatedAt          sql.NullTime `db:"created_at" json:"created_at"`
+	CreatedAt          *time.Time `db:"created_at" json:"created_at"`
 	Password           string       `db:"password" json:"password"`
-	VerificationNumber sql.NullString       `db:"verification_number" json:"verification_number"`
+	VerificationNumber *string       `db:"verification_number" json:"verification_number"`
 	IsProvider         bool         `db:"is_provider" json:"is_provider"`
 }
 
@@ -552,7 +552,7 @@ func (p *Provider) getProviders() ([]Provider, error) {
 
 	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil{
 		log.Printf("Error in DB: %v", err)
-		return users, err
+		return nil, err
 	}
 	return users, nil
 }
@@ -567,13 +567,10 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	mData := make(map[string][]Provider)
+	mData := make(map[string]interface{})
 	mData["result"] = data
-	
 	w.WriteHeader(http.StatusOK)
-	
 	w.Write(marshal(mData))
-	return
 }
 
 func (u *User) getUserHandler(w http.ResponseWriter, r *http.Request) {
