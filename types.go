@@ -476,7 +476,7 @@ func (c *Issue) createIssueHandler(w http.ResponseWriter, r *http.Request) {
 type User struct {
 	ID                 int    `db:"id" json:"id"`
 	Username           string `db:"username" json:"username"`
-	Fullname string `db:"fullname" json:"fullname"`
+	Fullname *string `db:"fullname" json:"fullname"`
 	Mobile             string `db:"mobile" json:"mobile"`
 	db                 *sqlx.DB
 	CreatedAt          sql.NullTime `db:"created_at" json:"created_at"`
