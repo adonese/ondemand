@@ -175,6 +175,8 @@ type Order struct {
 	IsPending bool `json:"is_pending" db:"is_pending"`
 	Description string `json:"description" db:"description"`
 	Category int `json:"category" db:"category"`
+	Provider *User `json:"provider,omitempty"`
+	UserProfile *User `json:"user,omitempty"` //*nice*
 }
 
 func (c *Order)verify()bool{
@@ -202,11 +204,33 @@ func (c *Order) get(id int) ([]Order, error) {
 
 func (c *Order) getProviders(id int) ([]Order, error) {
 	var services []Order
-
-	c.db.Exec(stmt)
-	if err := c.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
+	
+	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
 		return nil, err
 	}
+	
+	return services, nil
+}
+
+func (c *Order) getProvidersX(id int) ([]Order, error) {
+	var services []Order
+	var user User
+
+	c.db.Exec(stmt)
+	
+	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
+		return nil, err
+	}
+
+	for idx, v := range services{
+		if err := u.db.Get(&user, "select * from users where id = ?", v.UserID); err != nil {
+			log.Print(err.Error())
+			return nil, err
+		}
+		log.Printf("user is: %v", user)
+		services[idx].Provider = &user
+	}
+	
 	return services, nil
 }
 
@@ -279,7 +303,7 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
 
 	if  id != "" {
-		orders, err = c.getProviders(toInt(id))
+		orders, err = c.getProvidersX(toInt(id))
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
