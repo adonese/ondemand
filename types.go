@@ -269,7 +269,7 @@ func (c *Order) setProvider() ([]Order, error) {
 func (c *Order) save() error {
 	c.db.Exec(stmt)
 	
-	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid, description, category) values(:user_id, :created_at, :provider_id, :status, :uuid, description, category)", c); err != nil {
+	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid, description, category) values(:user_id, :created_at, :provider_id, :status, :uuid, :description, :category)", c); err != nil {
 		log.Printf("Error in cart.save: TX: %v", err)
 		return err
 	}
@@ -562,6 +562,13 @@ func (u *User) cleanInput() {
 
 }
 
+func (u *User) valid() bool {
+	if u.Password == "" || u.Username == "" || u.Mobile == "" {
+		return false
+	}
+	return true
+}
+
 func (u *User) verifyPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
@@ -728,6 +735,12 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	unmarshal(b, u)
 	u.cleanInput()
+	if !u.valid(){
+		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
 	u.generatePassword(u.Password)
 
 	if u.IsProvider{
