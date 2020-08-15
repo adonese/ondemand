@@ -723,7 +723,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	u.generatePassword(u.Password)
 
 	if u.IsProvider{
-		if err := u.saveUserTX(); err != nil {
+		if err := u.saveUser(); err != nil {
 			vErr := errorHandler{Code: "db_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
