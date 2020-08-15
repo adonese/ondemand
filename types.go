@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -556,6 +557,11 @@ func (u *User) generatePassword(password string) error {
 	return err
 }
 
+func (u *User) cleanInput() {
+	u.Username = strings.TrimSpace(u.Username)
+
+}
+
 func (u *User) verifyPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
@@ -689,6 +695,7 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unmarshal(b, u)
+	u.cleanInput()
 	pass := u.Password
 	log.Printf("User model is: %#v", u)
 	if err := u.getUser(u.Username); err != nil {
@@ -720,6 +727,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unmarshal(b, u)
+	u.cleanInput()
 	u.generatePassword(u.Password)
 
 	if u.IsProvider{
