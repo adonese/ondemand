@@ -737,14 +737,6 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(vErr.toJson())
 			return
 		}
-	}else{
-		err = u.saveUser()
-		if err != nil {
-			vErr := errorHandler{Code: "db_error", Message: err.Error()}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(vErr.toJson())
-			return
-		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(u))
 		return
