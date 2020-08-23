@@ -249,7 +249,7 @@ func (c *Order) getUsers(id int) ([]Order, error) {
 	if err := c.db.Select(&services, `select o.*, customers.fullname as customer_name, customers.mobile as customer_mobile, providers.fullname as provider_name, providers.mobile as provider_mobile from orders o
 	inner join users customers on customers.id = o.user_id
 	inner join users as providers on providers.id = o.provider_id
-	where customers.id = ?`, id); err != nil {
+	where customers.id = ? order by is_pending`, id); err != nil {
 		return nil, err
 	}
 	return services, nil
