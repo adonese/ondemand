@@ -25,7 +25,7 @@ const (
 )
 
 type Pagination struct {
-	Count int `json:"count"`
+	Count  int         `json:"count"`
 	Result interface{} `json:"result"`
 }
 
@@ -102,7 +102,6 @@ func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(service))
 }
 
-
 func (c *Service) serviceDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 			{[
@@ -165,33 +164,41 @@ func (c *Service) populateTest() error {
 
 }
 
-type Order struct {
-	ID         int  `json:"id" db:"id"`
-	UserID     int  `json:"user_id" db:"user_id"`
-	ProviderID int  `json:"provider_id" db:"provider_id"`
-	Status     bool `json:"status" db:"status"`
-	CreatedAt  sql.NullTime `db:"created_at" json:"created_at"`
-	OrderUUID string `json:"uuid" db:"uuid"`
-	db         *sqlx.DB
-	IsPending bool `json:"is_pending" db:"is_pending"`
-	Description string `json:"description" db:"description"`
-	Category int `json:"category" db:"category"`
-	Provider *User `json:"provider,omitempty"`
-	UserProfile *User `json:"user,omitempty"` //*nice*
+//CustomerProvider type for joining results in orders output
+type CustomerProvider struct {
+	CustomerName   string `json:"customer_name" db:"customer_name"`
+	ProviderName   string `json:"provider_name" db:"provider_name"`
+	CustomerMobile string `json:"customer_mobile" db:"customer_mobile"`
+	ProviderMobile string `json:"provider_mobile" db:"provider_mobile"`
 }
 
-func (c *Order)verify()bool{
+type Order struct {
+	ID          int          `json:"id" db:"id"`
+	UserID      int          `json:"user_id" db:"user_id"`
+	ProviderID  int          `json:"provider_id" db:"provider_id"`
+	Status      bool         `json:"status" db:"status"`
+	CreatedAt   sql.NullTime `db:"created_at" json:"created_at"`
+	OrderUUID   string       `json:"uuid" db:"uuid"`
+	db          *sqlx.DB
+	IsPending   bool   `json:"is_pending" db:"is_pending"`
+	Description string `json:"description" db:"description"`
+	Category    int    `json:"category" db:"category"`
+	Provider    *User  `json:"provider,omitempty"`
+	UserProfile *User  `json:"user,omitempty"` //*nice*
+	CustomerProvider
+}
+
+func (c *Order) verify() bool {
 	if c.Description == "" || c.Category == 0 || c.UserID == 0 {
 		return false
 	}
 	return true
 }
 
-func (c *Order)token()string{
+func (c *Order) token() string {
 	c.OrderUUID = uuid.New().String()
 	return c.OrderUUID
 }
-
 
 func (c *Order) get(id int) ([]Order, error) {
 	var services []Order
@@ -205,11 +212,11 @@ func (c *Order) get(id int) ([]Order, error) {
 
 func (c *Order) getProviders(id int) ([]Order, error) {
 	var services []Order
-	
+
 	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
 		return nil, err
 	}
-	
+
 	return services, nil
 }
 
@@ -218,12 +225,12 @@ func (c *Order) getProvidersX(id int) ([]Order, error) {
 	var user User
 
 	c.db.Exec(stmt)
-	
+
 	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
 		return nil, err
 	}
 
-	for idx, v := range services{
+	for idx, v := range services {
 		if err := u.db.Get(&user, "select * from users where id = ?", v.UserID); err != nil {
 			log.Print(err.Error())
 			return nil, err
@@ -231,7 +238,7 @@ func (c *Order) getProvidersX(id int) ([]Order, error) {
 		log.Printf("user is: %v", user)
 		services[idx].Provider = &user
 	}
-	
+
 	return services, nil
 }
 
@@ -239,7 +246,10 @@ func (c *Order) getUsers(id int) ([]Order, error) {
 	var services []Order
 
 	c.db.Exec(stmt)
-	if err := c.db.Select(&services, "select * from orders where user_id = ?", id); err != nil {
+	if err := c.db.Select(&services, `select o.*, customers.fullname as customer_name, customers.mobile as customer_mobile, providers.fullname as provider_name, providers.mobile as provider_mobile from orders o
+	inner join users customers on customers.id = o.user_id
+	inner join users as providers on providers.id = o.provider_id
+	where customers.id = ?`, id); err != nil {
 		return nil, err
 	}
 	return services, nil
@@ -268,7 +278,7 @@ func (c *Order) setProvider() ([]Order, error) {
 
 func (c *Order) save() error {
 	c.db.Exec(stmt)
-	
+
 	if _, err := c.db.NamedExec("insert into orders(user_id, created_at, provider_id, status, uuid, description, category) values(:user_id, :created_at, :provider_id, :status, :uuid, :description, :category)", c); err != nil {
 		log.Printf("Error in cart.save: TX: %v", err)
 		return err
@@ -296,14 +306,15 @@ func (c *Order) saveHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 	/*
-	{"count": 12, "result": [{order_id, provider_id, order,}]}
+		{"count": 12, "result": [{order_id, provider_id, order,}]}
 	*/
+	w.Header().Add("content-type", "application/json")
 	var orders []Order
 	var err error
 	id := r.URL.Query().Get("id")
 	userID := r.URL.Query().Get("user_id")
 
-	if  id != "" {
+	if id != "" {
 		orders, err = c.getProvidersX(toInt(id))
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -311,7 +322,7 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(vErr.toJson())
 			return
 		}
-	}else if userID != "" {
+	} else if userID != "" {
 		orders, err = c.getUsers(toInt(userID))
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -325,10 +336,9 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(res))
 }
 
-
-func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
+func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 	/*
-	todo marshall and then return id (for tracking and further inquiries)
+		todo marshall and then return id (for tracking and further inquiries)
 	*/
 
 	w.Header().Add("content-type", "application/json")
@@ -343,13 +353,13 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 
 	err = json.Unmarshal(body, c)
 	if err != nil {
-		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		res := errorHandler{Code: "bad_request", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(&res))
 		return
 	}
 
-	if r.Method == "PUT"{
+	if r.Method == "PUT" {
 		res, err := c.updateUUID()
 		if err != nil {
 			res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -357,17 +367,17 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 			w.Write(marshal(&res))
 			return
 		}
-			
-			w.WriteHeader(http.StatusOK)
-			w.Write(marshal(res))
-			return
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(res))
+		return
 	}
 	// user_id, uuid
 	// user_id, provider_id, uuid
 	// user_id, provider_id, uuid
 	if ok := c.verify(); !ok {
-		res := errorHandler{Code: "db_err", Message: "Error in db"}
-		w.WriteHeader(http.StatusInternalServerError)
+		res := errorHandler{Code: "bad_request", Message: "Fields are missing"}
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(&res))
 		return
 	}
@@ -382,12 +392,12 @@ func (c *Order)requestHandler(w http.ResponseWriter, r *http.Request){
 	res, _ := json.Marshal(maps)
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
-	
+
 }
 
-func (c *Order)setProviderHandler(w http.ResponseWriter, r *http.Request){
+func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
 	/*
-	todo marshall and then return id (for tracking and further inquiries)
+		todo marshall and then return id (for tracking and further inquiries)
 	*/
 
 	w.Header().Add("content-type", "application/json")
@@ -407,54 +417,54 @@ func (c *Order)setProviderHandler(w http.ResponseWriter, r *http.Request){
 		w.Write(marshal(&res))
 		return
 	}
-	
-		res, err := c.setProvider()
-		if err != nil {
-			res := errorHandler{Code: "bad_request", Message: "Error in request"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(marshal(&res))
-			return
-		}
-			
-		w.WriteHeader(http.StatusOK)
-		w.Write(marshal(res))
+
+	res, err := c.setProvider()
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
 		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(res))
+	return
 }
 
-func (c *Order)updateOrder(w http.ResponseWriter, r *http.Request){
+func (c *Order) updateOrder(w http.ResponseWriter, r *http.Request) {
 	/*
-	todo marshall and then return id (for tracking and further inquiries)
+		todo marshall and then return id (for tracking and further inquiries)
 	*/
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			res := errorHandler{Code: "bad_request", Message: "Error in request"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(marshal(&res))
-			return
-		}
-		defer r.Body.Close()
-	
-		err = json.Unmarshal(body, c)
-		if err != nil {
-			res := errorHandler{Code: "bad_request", Message: "Error in request"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(marshal(&res))
-			return
-		}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+	defer r.Body.Close()
 
-		if c.OrderUUID == "" || c.ProviderID == 0{
-			res := errorHandler{Code: "bad_request", Message: "Error in request"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(marshal(&res))
-			return
-		}
-		c.setProvider()
-		w.WriteHeader(http.StatusOK)
-		
-		res := result{
-			"result": c,
-		}
-		w.Write(marshal(res))
+	err = json.Unmarshal(body, c)
+	if err != nil {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+
+	if c.OrderUUID == "" || c.ProviderID == 0 {
+		res := errorHandler{Code: "bad_request", Message: "Error in request"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(&res))
+		return
+	}
+	c.setProvider()
+	w.WriteHeader(http.StatusOK)
+
+	res := result{
+		"result": c,
+	}
+	w.Write(marshal(res))
 }
 
 type Getter interface {
@@ -538,17 +548,16 @@ func (c *Issue) createIssueHandler(w http.ResponseWriter, r *http.Request) {
 
 // User struct in the system
 type User struct {
-	ID                 int    `db:"id" json:"id"`
-	Username           string `db:"username" json:"username"`
-	Fullname *string `db:"fullname" json:"fullname"`
-	Mobile             string `db:"mobile" json:"mobile"`
+	ID                 int     `db:"id" json:"id"`
+	Username           string  `db:"username" json:"username"`
+	Fullname           *string `db:"fullname" json:"fullname"`
+	Mobile             string  `db:"mobile" json:"mobile"`
 	db                 *sqlx.DB
 	CreatedAt          *time.Time `db:"created_at" json:"created_at"`
-	Password           string       `db:"password" json:"password"`
-	VerificationNumber *string       `db:"verification_number" json:"verification_number"`
-	IsProvider         bool         `db:"is_provider" json:"is_provider"`
-	Services []int `json:"services"`
-	
+	Password           string     `db:"password" json:"password"`
+	VerificationNumber *string    `db:"verification_number" json:"verification_number"`
+	IsProvider         bool       `db:"is_provider" json:"is_provider"`
+	Services           []int      `json:"services"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -576,10 +585,8 @@ func (u *User) verifyPassword(hash, password string) error {
 func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
-	
-	
-	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u)
-	err != nil {
+
+	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
@@ -589,16 +596,16 @@ func (u *User) saveUser() error {
 func (u *User) saveUserTX() error {
 
 	u.db.Exec(stmt)
-	
+
 	tx := u.db.MustBegin()
 	rr, err := tx.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	for _, v := range u.Services{
+	for _, v := range u.Services {
 		id, _ := rr.LastInsertId()
-	
+
 		if _, err := tx.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider)", map[string]interface{}{"user": id, "provider": v}); err != nil {
 			tx.Rollback()
 			return err
@@ -614,7 +621,7 @@ func (u *User) saveUserTX() error {
 }
 
 func (u *User) getUser(username string) error {
-	
+
 	//TODO update all queries to use Get for single result and select from multiple results
 	if err := u.db.Get(u, "select * from users where username = $1", username); err != nil {
 		log.Printf("Error in DB: %v", err)
@@ -649,14 +656,14 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 
 type Provider struct {
 	Score int `json:"score" db:"score"`
-	db *sqlx.DB
+	db    *sqlx.DB
 	User
 }
 
 func (p *Provider) getProviders() ([]Provider, error) {
 	var users []Provider
 
-	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil{
+	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
@@ -735,7 +742,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	unmarshal(b, u)
 	u.cleanInput()
-	if !u.valid(){
+	if !u.valid() {
 		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
@@ -743,24 +750,22 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	u.generatePassword(u.Password)
 
-	
-		if err := u.saveUser(); err != nil {
-			vErr := errorHandler{Code: "db_error", Message: err.Error()}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(vErr.toJson())
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(marshal(u))
+	if err := u.saveUser(); err != nil {
+		vErr := errorHandler{Code: "db_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
 		return
-	
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(u))
+	return
 
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(u))
 	return
 }
 
-func (u *User)saveProviders(user int, provider int)error{
+func (u *User) saveProviders(user int, provider int) error {
 	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider", map[string]interface{}{"user": user, "provider": provider}); err != nil {
 		return err
 	}

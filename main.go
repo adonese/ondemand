@@ -2,9 +2,6 @@ package main
 
 import "net/http"
 
-
-
-
 var stmt = `
 create table users (
 	id integer primary key,
@@ -60,7 +57,7 @@ var (
 
 var db, _ = getDB("test.db")
 
-func init(){
+func init() {
 
 	u.db = db
 	o.db = db
@@ -69,9 +66,8 @@ func init(){
 	p.db = db
 }
 
-func main(){
+func main() {
 
-	
 	mux := http.NewServeMux()
 	mux.Handle("/", Auth(http.HandlerFunc(login)))
 	mux.Handle("/login", http.HandlerFunc(u.login))
@@ -91,4 +87,3 @@ func main(){
 
 	http.ListenAndServe(":6662", mux)
 }
-
