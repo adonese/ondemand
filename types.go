@@ -790,7 +790,7 @@ func (p *Pushes) check() error {
 }
 
 func (p *Pushes) save() error {
-	if _, err := p.db.Exec("insert into pushes(user_id, onesignal_id) values(?, ?)", p.UserID, p.OneSignalID); err != nil {
+	if _, err := p.db.NamedExec("insert into pushes(user_id, onesignal_id) values(:user_id, :signal_id)", map[string]interface{}{"user_id": p.UserID, "signal_id": p.OneSignalID}); err != nil {
 		return err
 	}
 	return nil
@@ -798,7 +798,7 @@ func (p *Pushes) save() error {
 
 func (p *Pushes) getSignalID(id int) error {
 
-	if err := p.db.Get(p, "where user_id = ?", id); err != nil {
+	if err := p.db.Get(p, "select * from pushes where user_id = ?", id); err != nil {
 		return err
 	}
 	return nil
@@ -810,23 +810,34 @@ func (p *Pushes) saveHandler(w http.ResponseWriter, r *http.Request) {
 	d, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		verr := errorHandler{Code: "missing_fields", Message: "Some fields are missing"}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+
 		return
 	}
 	defer r.Body.Close()
 	err = json.Unmarshal(d, p)
+
 	if err != nil {
 		verr := errorHandler{Code: "marshalling_error", Message: err.Error()}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+
+		return
+	}
+
+	if err := p.check(); err != nil {
+		verr := errorHandler{Code: "empty_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+
 		return
 	}
 
 	if err := p.save(); err != nil {
 		verr := errorHandler{Code: "missing_fields", Message: err.Error()}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
 		return
 	}
 
@@ -842,15 +853,16 @@ func (p *Pushes) getIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	if id = r.URL.Query().Get("id"); id == "" {
 		verr := errorHandler{Code: "missing_fields", Message: "id is missing in url query"}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
 		return
 	}
 
 	if err := p.getSignalID(toInt(id)); err != nil {
 		verr := errorHandler{Code: "db_error", Message: err.Error()}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+
 		return
 	}
 	w.Write(marshal(p))
