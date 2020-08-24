@@ -94,7 +94,7 @@ func TestPushes_getIDHandler(t *testing.T) {
 		req  fields
 		want int
 	}{
-		{"successful test", fields{UserID: 2, OneSignalID: "mmm"}, 200},
+		{"successful test", fields{UserID: 200, OneSignalID: "mmm"}, 200},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -110,6 +110,7 @@ func TestPushes_getIDHandler(t *testing.T) {
 			if err != nil {
 				log.Fatal(err)
 			}
+			t.Logf("response is: %s", d)
 
 			if res.StatusCode != tt.want {
 				t.Logf("response is: %s", d)

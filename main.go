@@ -71,7 +71,7 @@ func init() {
 	i.db = db
 	s.db = db
 	p.db = db
-	p.db = db
+	pus.db = db
 }
 
 func main() {
