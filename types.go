@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,6 +17,8 @@ import (
 
 type genericMap = map[string]string
 type result = map[string]interface{}
+
+var successfulCreated = make(map[string]interface{})
 
 const (
 	NA = iota
@@ -770,4 +773,85 @@ func (u *User) saveProviders(user int, provider int) error {
 		return err
 	}
 	return nil
+}
+
+type Pushes struct {
+	ID          int    `json:"id" db:"id"`
+	UserID      int    `json:"user_id" db:"user_id"`
+	OneSignalID string `json:"onesignal_id" db:"onesignal_id"`
+	db          *sqlx.DB
+}
+
+func (p *Pushes) check() error {
+	if p.UserID == 0 || p.OneSignalID == "" {
+		return errors.New("empty_fields")
+	}
+	return nil
+}
+
+func (p *Pushes) save() error {
+	if _, err := p.db.Exec("insert into pushes(user_id, onesignal_id) values(?, ?)", p.UserID, p.OneSignalID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Pushes) getSignalID(id int) error {
+
+	if err := p.db.Get(p, "where user_id = ?", id); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *Pushes) saveHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
+	d, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		verr := errorHandler{Code: "missing_fields", Message: "Some fields are missing"}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	err = json.Unmarshal(d, p)
+	if err != nil {
+		verr := errorHandler{Code: "marshalling_error", Message: err.Error()}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := p.save(); err != nil {
+		verr := errorHandler{Code: "missing_fields", Message: err.Error()}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	res := successfulCreated
+	res["result"] = true
+	w.Write(marshal(res))
+
+}
+
+func (p *Pushes) getIDHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+	var id string
+
+	if id = r.URL.Query().Get("id"); id == "" {
+		verr := errorHandler{Code: "missing_fields", Message: "id is missing in url query"}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := p.getSignalID(toInt(id)); err != nil {
+		verr := errorHandler{Code: "db_error", Message: err.Error()}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	w.Write(marshal(p))
 }

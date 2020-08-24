@@ -37,6 +37,12 @@ create table issues (
 	created_at DATE DEFAULT (datetime('now','localtime'))
 );
 
+create table pushes (
+	id integer not null PRIMARY key,
+	user_id integer not null,
+	onesignal_id text not null,
+	FOREIGN key (user_id) references users(id)
+);
 
 create table userservices(
 	user_id integer not null,
@@ -48,11 +54,12 @@ create table userservices(
 `
 
 var (
-	u User
-	o Order
-	i Issue
-	s Service
-	p Provider
+	u   User
+	o   Order
+	i   Issue
+	s   Service
+	p   Provider
+	pus Pushes
 )
 
 var db, _ = getDB("test.db")
@@ -63,6 +70,7 @@ func init() {
 	o.db = db
 	i.db = db
 	s.db = db
+	p.db = db
 	p.db = db
 }
 
@@ -84,6 +92,8 @@ func main() {
 	// mux.Handle("/orders/status")
 	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
+	mux.Handle("/push/save", http.HandlerFunc(pus.saveHandler))
+	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
 
 	http.ListenAndServe(":6662", mux)
 }
