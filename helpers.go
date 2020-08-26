@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
@@ -16,6 +18,26 @@ func getDB(filename string) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func dbFields(values interface{}) ([]string, error) {
+
+	v := reflect.ValueOf(values)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	fields := []string{}
+	if v.Kind() == reflect.Struct {
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Type().Field(i).Tag.Get("db")
+			if field != "" {
+
+				fields = append(fields, field)
+			}
+		}
+		return fields, nil
+	}
+	return nil, errors.New("no data")
 }
 
 func Auth(next http.Handler) http.Handler {

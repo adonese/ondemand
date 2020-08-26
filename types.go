@@ -585,6 +585,63 @@ func (u *User) verifyPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
+var getNames = make(map[string]bool)
+
+func (u *User) buildQuery() string {
+	var s string
+	s = "update users set "
+	if u.Username != "" {
+		s += "username = ?, "
+		getNames["username"] = true
+	}
+	if u.Mobile != "" {
+		s += "mobile = ?, "
+		getNames["mobile"] = true
+	}
+	if u.Fullname != nil {
+		s += "fullname = ?, "
+		getNames["fullname"] = true
+	}
+	return s
+}
+
+func (u *User) updateUser() error {
+
+	u.db.Exec(stmt)
+	if u.Username != "" {
+		if _, err := u.db.Exec("update users set username = ? where id = ?", u.Username, u.ID); err != nil {
+			return err
+		}
+	}
+	if u.Mobile != "" {
+		if _, err := u.db.Exec("update users set mobile = ? where id = ?", u.Mobile, u.ID); err != nil {
+			return err
+		}
+	}
+	if u.Fullname != nil {
+		if _, err := u.db.Exec("update users set fullname = ? where id = ?", u.Fullname, u.ID); err != nil {
+			return err
+		}
+	}
+
+	if u.Password != "" {
+		oldPass := u.Password
+		hash, _ := u.getPassword(u.ID)
+
+		if err := u.verifyPassword(hash, oldPass); err != nil {
+			return errors.New("password not matched records")
+		}
+		if err := u.generatePassword(oldPass); err != nil {
+			return err
+		}
+
+		if _, err := u.db.Exec("update users set password = ? where id = ?", u.Fullname, u.Password); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
@@ -631,6 +688,16 @@ func (u *User) getUser(username string) error {
 		return err
 	}
 	return nil
+}
+
+func (u *User) getPassword(id int) (string, error) {
+
+	//TODO update all queries to use Get for single result and select from multiple results
+	if err := u.db.Get(u, "select * from users where id = $1", id); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return "", err
+	}
+	return u.Password, nil
 }
 
 func (u *User) getProviders() ([]User, error) {
@@ -743,10 +810,36 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
-	unmarshal(b, u)
+
+	if err := unmarshal(b, u); err != nil {
+		vErr := errorHandler{Code: "marshalling_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(vErr))
+		return
+	}
+
 	u.cleanInput()
+	if r.Method == "PUT" {
+		if u.ID == 0 {
+			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		if err := u.updateUser(); err != nil {
+			vErr := errorHandler{Code: "update_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// this is for POST only requests
 	if !u.valid() {
-		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		vErr := errorHandler{Code: "bad_request", Message: "empty request fields"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
