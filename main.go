@@ -51,15 +51,23 @@ create table userservices(
 	FOREIGN key (service_id) REFERENCES services(id),
 	unique(user_id, service_id)
 	);
+
+
+create table suggestions (
+		id integer not null PRIMARY key,
+		suggestion text not null,
+		created_at DATE DEFAULT (datetime('now','localtime'))
+	);
 `
 
 var (
-	u   User
-	o   Order
-	i   Issue
-	s   Service
-	p   Provider
-	pus Pushes
+	u    User
+	o    Order
+	i    Issue
+	s    Service
+	p    Provider
+	Sugg Suggestion
+	pus  Pushes
 )
 
 var db, _ = getDB("test.db")
@@ -72,6 +80,7 @@ func init() {
 	s.db = db
 	p.db = db
 	pus.db = db
+	Sugg.db = db
 }
 
 func main() {
@@ -94,6 +103,8 @@ func main() {
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
 	mux.Handle("/push/save", http.HandlerFunc(pus.saveHandler))
 	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
+
+	mux.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
 
 	http.ListenAndServe(":6662", mux)
 }

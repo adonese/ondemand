@@ -960,3 +960,49 @@ func (p *Pushes) getIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(marshal(p))
 }
+
+type Suggestion struct {
+	ID         int    `json:"id" db:"id"`
+	Suggestion string `json:"suggestion" db:"suggestion"`
+	db         *sqlx.DB
+}
+
+func (s *Suggestion) save() error {
+	if _, err := s.db.Exec("insert into suggestions(suggestion) value(?)", s.Suggestion); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Suggestion) check() bool {
+	if s.Suggestion != "" {
+		return true
+	}
+	return false
+}
+
+func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
+	r.Header.Add("content-type", "application/json")
+
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		verr := errorHandler{Code: "empty_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+	marshal(b)
+	if ok := s.check(); !ok {
+		verr := errorHandler{Code: "empty_complain", Message: "Empty complain text"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+	if err := s.save(); err != nil {
+		verr := errorHandler{Code: "db_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
