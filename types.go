@@ -646,9 +646,12 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 
-	if _, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
+	} else {
+		id, _ := n.LastInsertId()
+		u.ID = int(id)
 	}
 	return nil
 }
@@ -854,11 +857,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(u))
-	return
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(marshal(u))
-	return
 }
 
 func (u *User) saveProviders(user int, provider int) error {
