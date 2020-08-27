@@ -14,6 +14,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var testdb, _ = getDB("test.db")
+
 func Test_getHandler(t *testing.T) {
 	type args struct {
 		g Getter
@@ -161,6 +163,43 @@ func TestPushes_registerHandler(t *testing.T) {
 			if res.StatusCode != tt.want {
 				t.Logf("response is: %s", d)
 				t.Errorf("getUser() got = %v, want %v", res.StatusCode, tt.want)
+			}
+		})
+	}
+}
+
+func TestUser_getTags(t *testing.T) {
+
+	tests := []struct {
+		name   string
+		fields *User
+		want   string
+	}{
+		{"testing query builder", &User{db: testdb, Username: "mohamed ahmed", Password: "123456", Mobile: "0987375"}, "insert into users()"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, _, _ := tt.fields.getTags(); got != tt.want {
+				t.Errorf("User.getTags() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUser_updateUser(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		fields  User
+		wantErr bool
+	}{
+		{"testing successful", User{db: testdb, Username: "mohamed ahmed", ID: 2, Password: "shittyholeshit"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if err := tt.fields.updateUser(); (err != nil) != tt.wantErr {
+				t.Errorf("User.updateUser() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

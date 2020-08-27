@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
@@ -587,57 +588,36 @@ func (u *User) verifyPassword(hash, password string) error {
 
 var getNames = make(map[string]bool)
 
-func (u *User) buildQuery() string {
-	var s string
-	s = "update users set "
+func (u *User) getTags() (string, []interface{}, error) {
+	var ss sq.UpdateBuilder
+	stmt := sq.Update("users")
 	if u.Username != "" {
-		s += "username = ?, "
-		getNames["username"] = true
+		ss = stmt.Set("username", (u.Username))
 	}
-	if u.Mobile != "" {
-		s += "mobile = ?, "
-		getNames["mobile"] = true
+	if u.Password != "" {
+		ss = ss.Set("password", (u.Password))
 	}
 	if u.Fullname != nil {
-		s += "fullname = ?, "
-		getNames["fullname"] = true
+		ss = ss.Set("fullname", (*u.Fullname))
 	}
-	return s
+	if u.Mobile != "" {
+		ss = ss.Set("mobile", (u.Mobile))
+	}
+
+	ss = ss.Where("id = ?", u.ID)
+
+	return ss.ToSql()
 }
 
 func (u *User) updateUser() error {
 
-	u.db.Exec(stmt)
-	if u.Username != "" {
-		if _, err := u.db.Exec("update users set username = ? where id = ?", u.Username, u.ID); err != nil {
-			return err
-		}
-	}
-	if u.Mobile != "" {
-		if _, err := u.db.Exec("update users set mobile = ? where id = ?", u.Mobile, u.ID); err != nil {
-			return err
-		}
-	}
-	if u.Fullname != nil {
-		if _, err := u.db.Exec("update users set fullname = ? where id = ?", u.Fullname, u.ID); err != nil {
-			return err
-		}
+	q, args, err := u.getTags()
+	if err != nil {
+		return err
 	}
 
-	if u.Password != "" {
-		oldPass := u.Password
-		hash, _ := u.getPassword(u.ID)
-
-		if err := u.verifyPassword(hash, oldPass); err != nil {
-			return errors.New("password not matched records")
-		}
-		if err := u.generatePassword(oldPass); err != nil {
-			return err
-		}
-
-		if _, err := u.db.Exec("update users set password = ? where id = ?", u.Fullname, u.Password); err != nil {
-			return err
-		}
+	if _, err := u.db.Exec(q, args...); err != nil {
+		return err
 	}
 	return nil
 }
@@ -822,22 +802,23 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.cleanInput()
+	if r.Method == "PUT" {
+		if u.ID == 0 {
+			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		if err := u.updateUser(); err != nil {
+			vErr := errorHandler{Code: "update_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
 
-	if u.ID == 0 {
-		vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
+		w.WriteHeader(http.StatusOK)
 		return
 	}
-	if err := u.updateUser(); err != nil {
-		vErr := errorHandler{Code: "update_error", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-
 }
 
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -860,14 +841,31 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.cleanInput()
+	if r.Method == "PUT" {
+		if u.ID == 0 {
+			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		if err := u.updateUser(); err != nil {
+			vErr := errorHandler{Code: "update_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
 
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// this is for POST only requests
 	if !u.valid() {
 		vErr := errorHandler{Code: "bad_request", Message: "empty request fields"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
-
 	u.generatePassword(u.Password)
 
 	if err := u.saveUser(); err != nil {
