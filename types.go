@@ -802,6 +802,44 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
+	defer r.Body.Close()
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+
+	if err := unmarshal(b, u); err != nil {
+		vErr := errorHandler{Code: "marshalling_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(vErr))
+		return
+	}
+
+	u.cleanInput()
+
+	if u.ID == 0 {
+		vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	if err := u.updateUser(); err != nil {
+		vErr := errorHandler{Code: "update_error", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+}
+
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 
@@ -822,31 +860,14 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.cleanInput()
-	if r.Method == "PUT" {
-		if u.ID == 0 {
-			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(vErr.toJson())
-			return
-		}
-		if err := u.updateUser(); err != nil {
-			vErr := errorHandler{Code: "update_error", Message: err.Error()}
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(vErr.toJson())
-			return
-		}
 
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	// this is for POST only requests
 	if !u.valid() {
 		vErr := errorHandler{Code: "bad_request", Message: "empty request fields"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
+
 	u.generatePassword(u.Password)
 
 	if err := u.saveUser(); err != nil {
