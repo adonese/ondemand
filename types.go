@@ -92,7 +92,7 @@ func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 	maps["result"] = svcs
 	res, _ := json.Marshal(maps)
 	w.WriteHeader(http.StatusOK)
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	w.Write(res)
 	return
 	service, err := c.all()
@@ -128,7 +128,7 @@ func (c *Service) serviceDetailsHandler(w http.ResponseWriter, r *http.Request) 
 	maps["result"] = svcs
 	res, _ := json.Marshal(maps)
 	w.WriteHeader(http.StatusOK)
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	w.Write(res)
 	return
 	service, err := c.all()
@@ -313,7 +313,7 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 		{"count": 12, "result": [{order_id, provider_id, order,}]}
 	*/
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	var orders []Order
 	var err error
 	id := r.URL.Query().Get("id")
@@ -346,7 +346,7 @@ func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 		todo marshall and then return id (for tracking and further inquiries)
 	*/
 
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -405,7 +405,7 @@ func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
 		todo marshall and then return id (for tracking and further inquiries)
 	*/
 
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -730,7 +730,7 @@ func (p *Provider) getProviders() ([]Provider, error) {
 }
 
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	data, err := p.getProviders()
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -789,7 +789,7 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -828,7 +828,7 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -922,7 +922,7 @@ func (p *Pushes) getSignalID(id int) error {
 }
 
 func (p *Pushes) saveHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	d, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -965,7 +965,7 @@ func (p *Pushes) saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Pushes) getIDHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	var id string
 
 	if id = r.URL.Query().Get("id"); id == "" {
@@ -1006,7 +1006,7 @@ func (s *Suggestion) check() bool {
 }
 
 func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
-	r.Header.Add("content-type", "application/json")
+	r.Header.Add("content-type", "application/json; charset=utf-8")
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {

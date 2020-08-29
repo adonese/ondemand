@@ -58,7 +58,7 @@ func TestPushes_saveHandler(t *testing.T) {
 
 			d := marshal(tt.req)
 
-			res, err := http.Post(ts.URL, "application/json", bytes.NewBuffer(d))
+			res, err := http.Post(ts.URL, "application/json; charset=utf-8", bytes.NewBuffer(d))
 			if err != nil {
 				log.Fatal(err)
 			}
