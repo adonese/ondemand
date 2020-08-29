@@ -85,6 +85,9 @@ func init() {
 
 func main() {
 
+	hub := newHub()
+	go hub.run()
+
 	mux := http.NewServeMux()
 	mux.Handle("/", Auth(http.HandlerFunc(login)))
 	mux.Handle("/login", http.HandlerFunc(u.login))
@@ -106,6 +109,10 @@ func main() {
 	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
 
 	mux.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
+	// mux.Handle("/ws", http.HandlerFunc(ws))
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
 	http.ListenAndServe(":6662", mux)
 }

@@ -1034,7 +1034,7 @@ func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
 
 var upgrader = websocket.Upgrader{} // use default options
 
-func resources(w http.ResponseWriter, r *http.Request) {
+func ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
