@@ -563,6 +563,7 @@ type User struct {
 	VerificationNumber *string    `db:"verification_number" json:"verification_number"`
 	IsProvider         bool       `db:"is_provider" json:"is_provider"`
 	Services           []int      `json:"services"`
+	IsActive           *bool      `json:"is_active" db:"is_active"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -592,17 +593,21 @@ var getNames = make(map[string]bool)
 func (u *User) getTags() (string, []interface{}, error) {
 	var ss sq.UpdateBuilder
 	stmt := sq.Update("users")
+	ss = stmt
 	if u.Username != "" {
-		ss = stmt.Set("username", (u.Username))
+		ss = stmt.Set("username", u.Username)
 	}
 	if u.Password != "" {
-		ss = ss.Set("password", (u.Password))
+		ss = ss.Set("password", u.Password)
 	}
 	if u.Fullname != nil {
-		ss = ss.Set("fullname", (*u.Fullname))
+		ss = ss.Set("fullname", u.Fullname)
 	}
 	if u.Mobile != "" {
-		ss = ss.Set("mobile", (u.Mobile))
+		ss = ss.Set("mobile", u.Mobile)
+	}
+	if u.IsActive != nil {
+		ss = ss.Set("is_active", u.IsActive)
 	}
 
 	ss = ss.Where("id = ?", u.ID)

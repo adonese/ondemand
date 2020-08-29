@@ -188,12 +188,14 @@ func TestUser_getTags(t *testing.T) {
 
 func TestUser_updateUser(t *testing.T) {
 
+	var res = false
 	tests := []struct {
 		name    string
 		fields  User
 		wantErr bool
 	}{
 		{"testing successful", User{db: testdb, Username: "mohamed ahmed", ID: 2, Password: "shittyholeshit"}, false},
+		{"testing id and is_active", User{db: testdb, ID: 2, IsActive: &res}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
