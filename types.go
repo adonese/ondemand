@@ -170,12 +170,13 @@ func (c *Service) populateTest() error {
 
 //CustomerProvider type for joining results in orders output
 type CustomerProvider struct {
-	CustomerName   string `json:"customer_name" db:"customer_name"`
-	ProviderName   string `json:"provider_name" db:"provider_name"`
-	CustomerMobile string `json:"customer_mobile" db:"customer_mobile"`
-	ProviderMobile string `json:"provider_mobile" db:"provider_mobile"`
+	CustomerName   *string `json:"customer_name" db:"customer_name"`
+	ProviderName   *string `json:"provider_name" db:"provider_name"`
+	CustomerMobile *string `json:"customer_mobile" db:"customer_mobile"`
+	ProviderMobile *string `json:"provider_mobile" db:"provider_mobile"`
 }
 
+//Order
 type Order struct {
 	ID          int          `json:"id" db:"id"`
 	UserID      int          `json:"user_id" db:"user_id"`
