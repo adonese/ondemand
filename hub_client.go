@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"net/http"
 	"time"
@@ -54,20 +53,28 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		_, message, err := c.conn.ReadMessage()
+
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		// message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		// if bytes.Contains(message, []byte("my")) {
+		// 	log.Print("it reached the channel acc block")
+		// 	accept <- struct{}{}
+		// }
+
 		c.hub.broadcast <- message
 	}
+	log.Printf("the data is: %x", <-c.hub.broadcast)
 }
 
 // writePump pumps messages from the hub to the websocket connection.
@@ -83,7 +90,37 @@ func (c *Client) writePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case _, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				// The hub closed the channel.
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			// check for the data here
+			if true {
+
+				accept <- struct{}{}
+			}
+
+			// w, err := c.conn.NextWriter(websocket.TextMessage)
+			// if err != nil {
+			// 	return
+			// }
+			// w.Write([]byte(message))
+
+			// // Add queued chat messages to the current websocket message.
+			// n := len(c.send)
+			// for i := 0; i < n; i++ {
+			// 	// w.Write(newline)
+			// 	w.Write(<-c.send)
+			// }
+
+			// if err := w.Close(); err != nil {
+			// 	return
+			// }
+		case message, ok := <-data:
+			// accept <- struct{}{} //fix me this should be not like this
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
@@ -95,12 +132,12 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			w.Write([]byte(message))
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(newline)
+				// w.Write(newline)
 				w.Write(<-c.send)
 			}
 
@@ -115,6 +152,8 @@ func (c *Client) writePump() {
 		}
 	}
 }
+
+var data = make(chan []byte, 256)
 
 // serveWs handles websocket requests from the peer.
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {

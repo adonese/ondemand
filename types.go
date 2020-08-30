@@ -1033,9 +1033,10 @@ func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var upgrader = websocket.Upgrader{} // use default options
+var upgrader2 = websocket.Upgrader{}
 
 func ws(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
+	c, err := upgrader2.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
@@ -1047,11 +1048,27 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("read:", err)
 			break
 		}
-		log.Printf("recv: %s", message)
-		err = c.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
+		data <- message
+
+		select {
+		case <-accept:
+			log.Printf("recv: %s", message)
+			err = c.WriteMessage(mt, []byte("it worked"))
+			if err != nil {
+				log.Println("write:", err)
+
+			}
+		case <-time.After(1 * time.Minute):
+			log.Printf("recv: %s", message)
+			err = c.WriteMessage(mt, []byte("timeout"))
+			if err != nil {
+				log.Println("write:", err)
+
+			}
+			c.Close()
+			return
 		}
+		// close(accept)
+
 	}
 }
