@@ -1000,10 +1000,8 @@ func (s *Suggestion) save() error {
 }
 
 func (s *Suggestion) check() bool {
-	if s.Suggestion != "" {
-		return true
-	}
-	return false
+	return s.Suggestion != ""
+
 }
 
 func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
@@ -1058,7 +1056,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				log.Println("write:", err)
 
 			}
-		case <-time.After(1 * time.Minute):
+		case <-time.After(10 * time.Second):
 			log.Printf("recv: %s", message)
 			err = c.WriteMessage(mt, []byte("timeout"))
 			if err != nil {
