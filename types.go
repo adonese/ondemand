@@ -53,6 +53,10 @@ func marshal(o interface{}) []byte {
 	return d
 }
 
+type OrdersUsers struct {
+	Order
+	User
+}
 type Service struct {
 	ID   int    `json:"id" db:"id"`
 	Name string `json:"name" db:"name"`
@@ -338,6 +342,31 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	res := Pagination{Count: len(orders), Result: orders}
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(res))
+}
+
+func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
+
+	/*
+		{"count": 12, "result": [{order_id, provider_id, order,}]}
+	*/
+	w.Header().Add("content-type", "application/json; charset=utf-8")
+	var res []OrdersUsers
+
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := c.db.Select(&res, `select u.fullname, u.mobile, o.*  from users u
+	join orders o on o.user_id = u.id where u.id = 2`, id); err != nil {
+		verr := errorHandler{Code: "db_err", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(res))
 }

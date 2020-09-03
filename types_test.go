@@ -278,3 +278,44 @@ func TestProvider_byID(t *testing.T) {
 		})
 	}
 }
+
+func TestOrder_byID(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	order := &Order{db: testdb}
+
+	defer testdb.Close()
+
+	ts := httptest.NewServer(http.HandlerFunc(order.byID))
+	defer ts.Close()
+
+	tests := []struct {
+		name string
+		args int
+		want []OrdersUsers
+		code int
+	}{
+		{"testing data", 2, []OrdersUsers{}, 200},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			log.Printf("the data is: %v", fmt.Sprintf("%s?id=%d", ts.URL, tt.args))
+			res, err := http.Get(fmt.Sprintf("%s?id=%d", ts.URL, tt.args))
+			if err != nil {
+				log.Fatal(err)
+			}
+			d, err := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+			t.Logf("response is: %s", d)
+
+			if res.StatusCode != tt.code {
+				t.Logf("response is: %s", d)
+				t.Errorf("byID() got = %v, want %v", res.StatusCode, tt.code)
+			}
+		})
+	}
+}
