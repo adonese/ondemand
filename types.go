@@ -1051,6 +1051,12 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		// close connection
+		c.Close()
+	}
+
 	// get user info
 	//
 
@@ -1061,7 +1067,9 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("read:", err)
 			break
 		}
-		data <- message
+		// get user info here
+		user, _ := p.byID(toInt(id))
+		data <- []byte(marshal(user))
 
 		select {
 		case data := <-accept:

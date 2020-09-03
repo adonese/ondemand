@@ -135,6 +135,7 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
+			// i'm not sure how this part work actually
 			w.Write([]byte(message))
 
 			// Add queued chat messages to the current websocket message.
@@ -167,9 +168,8 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		panic(err)
+		conn.Close()
 		return
-
 	}
 	//TODO
 	/*
