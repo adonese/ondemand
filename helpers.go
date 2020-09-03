@@ -48,6 +48,9 @@ func Auth(next http.Handler) http.Handler {
 }
 
 func toInt(s string) int {
-	d, _ := strconv.Atoi(s)
+	d, err := strconv.Atoi(s)
+	if err != nil {
+		return -9999
+	}
 	return d
 }

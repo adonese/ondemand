@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -202,6 +203,77 @@ func TestUser_updateUser(t *testing.T) {
 
 			if err := tt.fields.updateUser(); (err != nil) != tt.wantErr {
 				t.Errorf("User.updateUser() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestUser_getProviders(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	pro := &Provider{db: testdb}
+
+	defer testdb.Close()
+	type fields struct {
+		ID                 int
+		Username           string
+		Fullname           *string
+		Mobile             string
+		db                 *sqlx.DB
+		CreatedAt          *time.Time
+		Password           string
+		VerificationNumber *string
+		IsProvider         bool
+		Services           []int
+		IsActive           *bool
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		want    []User
+		wantErr bool
+	}{
+		{"get_providers", fields{}, []User{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pro.getProviders()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("User.getProviders() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("User.getProviders() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProvider_byID(t *testing.T) {
+	var testdb, _ = getDB("test.db")
+	pro := &Provider{db: testdb}
+
+	defer testdb.Close()
+	type args struct {
+		id int
+	}
+	tests := []struct {
+		name    string
+		fields  args
+		want    User
+		wantErr bool
+	}{
+		{"get_providers", args{id: 2}, User{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pro.byID(tt.fields.id)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("User.getProviders() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("User.getProviders() = %v, want %v", got, tt.want)
 			}
 		})
 	}

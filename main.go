@@ -71,7 +71,7 @@ var (
 )
 
 var db, _ = getDB("test.db")
-var accept = make(chan struct{})
+var accept = make(chan struct{ id int })
 
 func init() {
 
@@ -110,7 +110,7 @@ func main() {
 	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
 
 	mux.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
-	mux.Handle("/ws2", http.HandlerFunc(ws))
+	mux.Handle("/ws2", http.HandlerFunc(p.ws))
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})

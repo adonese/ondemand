@@ -730,6 +730,17 @@ func (p *Provider) getProviders() ([]Provider, error) {
 	return users, nil
 }
 
+func (p *Provider) byID(id int) (User, error) {
+	var user User
+
+	// skip is_provider check here
+	if err := p.db.Get(&user, "select * from users where id = ?", id); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return user, err
+	}
+	return user, nil
+}
+
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	data, err := p.getProviders()
@@ -1033,12 +1044,16 @@ func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
 var upgrader = websocket.Upgrader{} // use default options
 var upgrader2 = websocket.Upgrader{}
 
-func ws(w http.ResponseWriter, r *http.Request) {
+func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader2.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
+
+	// get user info
+	//
+
 	defer c.Close()
 	for {
 		mt, message, err := c.ReadMessage()
@@ -1049,15 +1064,20 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		data <- message
 
 		select {
-		case <-accept:
-			log.Printf("recv: %s", message)
-			err = c.WriteMessage(mt, []byte("it worked"))
+		case data := <-accept:
+			log.Printf("recv_accept: %d", data.id)
+			provider, err := p.byID(data.id)
+			if err != nil {
+				log.Printf("error in retrieving user info: Err: %v", err)
+			}
+			log.Printf("The providers list is: %v", provider)
+			err = c.WriteJSON(provider)
 			if err != nil {
 				log.Println("write:", err)
 
 			}
 		case <-time.After(10 * time.Second):
-			log.Printf("recv: %s", message)
+			log.Printf("recv_timeout: %s", message)
 			err = c.WriteMessage(mt, []byte("timeout"))
 			if err != nil {
 				log.Println("write:", err)
