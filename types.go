@@ -352,13 +352,15 @@ func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 		{"count": 12, "result": [{order_id, provider_id, order,}]}
 	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
-	var res OrdersUsers
 
 	id := r.URL.Query().Get("uuid")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	var res OrdersUsers
+
 	if err := c.db.Get(&res, `select u.fullname, u.mobile, o.*  from users u
 	join orders o on o.user_id = u.id where o.uuid = ?`, id); err != nil {
 		verr := errorHandler{Code: "db_err", Message: err.Error()}
@@ -759,6 +761,19 @@ func (p *Provider) getProviders() ([]Provider, error) {
 	return users, nil
 }
 
+func (p *Provider) byUUID(id string) (OrdersUsers, error) {
+	var res OrdersUsers
+	log.Printf("the uuid is: %v", id)
+
+	if err := p.db.Get(&res, `select u.fullname, u.mobile, o.* from users u
+	join orders o on o.user_id = u.id where o.uuid = ?`, id); err != nil {
+
+		return OrdersUsers{}, err
+	}
+	return res, nil
+
+}
+
 func (p *Provider) byID(id int) (User, error) {
 	var user User
 
@@ -1097,7 +1112,12 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		// get user info here
-		user, _ := p.byID(toInt(id))
+		user, err := p.byUUID(id)
+		if err != nil {
+			log.Printf("error in ws get by uuid: %v", err)
+			c.Close()
+			return
+		}
 		data <- []byte(marshal(user))
 
 		select {
