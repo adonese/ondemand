@@ -286,7 +286,7 @@ func TestOrder_byID(t *testing.T) {
 
 	defer testdb.Close()
 
-	ts := httptest.NewServer(http.HandlerFunc(order.byID))
+	ts := httptest.NewServer(http.HandlerFunc(order.byUUID))
 	defer ts.Close()
 
 	tests := []struct {
@@ -300,8 +300,8 @@ func TestOrder_byID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			log.Printf("the data is: %v", fmt.Sprintf("%s?id=%d", ts.URL, tt.args))
-			res, err := http.Get(fmt.Sprintf("%s?id=%d", ts.URL, tt.args))
+			log.Printf("the data is: %v", fmt.Sprintf("%s?uuid=%d", ts.URL, tt.args))
+			res, err := http.Get(fmt.Sprintf("%s?uuid=%d", ts.URL, tt.args))
 			if err != nil {
 				log.Fatal(err)
 			}

@@ -346,7 +346,7 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(res))
 }
 
-func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
+func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
 	/*
 		{"count": 12, "result": [{order_id, provider_id, order,}]}
@@ -354,13 +354,13 @@ func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	var res []OrdersUsers
 
-	id := r.URL.Query().Get("id")
+	id := r.URL.Query().Get("uuid")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if err := c.db.Select(&res, `select u.fullname, u.mobile, o.*  from users u
-	join orders o on o.user_id = u.id where u.id = 2`, id); err != nil {
+	join orders o on o.user_id = u.id where o.uuid = ?`, id); err != nil {
 		verr := errorHandler{Code: "db_err", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
