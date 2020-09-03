@@ -291,17 +291,17 @@ func TestOrder_byID(t *testing.T) {
 
 	tests := []struct {
 		name string
-		args int
+		args string
 		want []OrdersUsers
 		code int
 	}{
-		{"testing data", 2, []OrdersUsers{}, 200},
+		{"testing data", "f142eee5-03b3-403d-82da-1affa62c4e00", []OrdersUsers{}, 200},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			log.Printf("the data is: %v", fmt.Sprintf("%s?uuid=%d", ts.URL, tt.args))
-			res, err := http.Get(fmt.Sprintf("%s?uuid=%d", ts.URL, tt.args))
+			log.Printf("the data is: %v", fmt.Sprintf("%s?uuid=%s", ts.URL, tt.args))
+			res, err := http.Get(fmt.Sprintf("%s?uuid=%s", ts.URL, tt.args))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -310,11 +310,16 @@ func TestOrder_byID(t *testing.T) {
 			if err != nil {
 				log.Fatal(err)
 			}
+			var orderUser OrdersUsers
+			json.Unmarshal(d, &orderUser)
 			t.Logf("response is: %s", d)
 
 			if res.StatusCode != tt.code {
 				t.Logf("response is: %s", d)
 				t.Errorf("byID() got = %v, want %v", res.StatusCode, tt.code)
+			}
+			if !reflect.DeepEqual(orderUser, OrdersUsers{}) {
+				t.Errorf(("byUUID() got = %v, want %v"), orderUser, OrdersUsers{})
 			}
 		})
 	}
