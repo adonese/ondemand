@@ -199,7 +199,7 @@ type Order struct {
 }
 
 func (c *Order) verify() bool {
-	if c.Description == "" || c.Category == 0 || c.UserID == 0 {
+	if c.Category == 0 || c.UserID == 0 {
 		return false
 	}
 	return true
