@@ -61,7 +61,7 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, _, err := c.conn.ReadMessage()
 
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -75,9 +75,9 @@ func (c *Client) readPump() {
 		// 	accept <- struct{}{}
 		// }
 
-		c.hub.broadcast <- message
+		// c.hub.broadcast <- message
 	}
-	log.Printf("the data is: %x", <-c.hub.broadcast)
+	// log.Printf("the data is: %x", <-c.hub.broadcast)
 }
 
 // writePump pumps messages from the hub to the websocket connection.
