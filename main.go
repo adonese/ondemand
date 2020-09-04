@@ -71,7 +71,7 @@ var (
 )
 
 var db, _ = getDB("test.db")
-var accept = make(chan struct{ id int })
+var accept = make(chan struct{ id int }, 256)
 
 func init() {
 

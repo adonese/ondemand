@@ -14,9 +14,11 @@ type Hub struct {
 	unregister chan *Client
 }
 
+var xbroadcast = make(chan []byte)
+
 func newHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		broadcast:  xbroadcast,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),

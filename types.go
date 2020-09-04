@@ -1118,7 +1118,7 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 			c.Close()
 			return
 		}
-		data <- []byte(marshal(user))
+		xbroadcast <- []byte(marshal(user))
 
 		select {
 		case data := <-accept:
