@@ -11,7 +11,9 @@ create table users (
 	is_provider integer not null default 0,
 	password text,
 	verification_number text,
-	created_at DATE DEFAULT (datetime('now','localtime'))
+	created_at DATE DEFAULT (datetime('now','localtime')),
+	score integer default 0,
+	description text
 );
 
 create table services (

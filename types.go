@@ -596,6 +596,8 @@ type User struct {
 	IsProvider         bool       `db:"is_provider" json:"is_provider"`
 	Services           []int      `json:"services"`
 	IsActive           *bool      `json:"is_active" db:"is_active"`
+	Score              int        `json:"score" db:"score"`
+	Description        *string    `json:"description" db:"description"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -1106,7 +1108,7 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 
 	defer c.Close()
 	for {
-		mt, message, err := c.ReadMessage()
+		_, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -1135,10 +1137,10 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 			}
 		case <-time.After(10 * time.Second):
 			log.Printf("recv_timeout: %s", message)
-			err = c.WriteMessage(mt, []byte("timeout"))
+			verr := errorHandler{Code: "timeout", Message: "No providers found. Try again."}
+			err = c.WriteJSON(verr)
 			if err != nil {
 				log.Println("write:", err)
-
 			}
 			c.Close()
 			return

@@ -243,7 +243,7 @@ func TestUser_getProviders(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("User.getProviders() = %v, want %v", got, tt.want)
+				t.Errorf("User.getProviders() = %#v, want %v", got, tt.want)
 			}
 		})
 	}
