@@ -748,8 +748,8 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type Provider struct {
-	Score int `json:"score" db:"score"`
-	db    *sqlx.DB
+	Score2 int `json:"score2" db:"score2"`
+	db     *sqlx.DB
 	User
 }
 
@@ -789,6 +789,7 @@ func (p *Provider) byID(id int) (User, error) {
 
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
+
 	data, err := p.getProviders()
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
