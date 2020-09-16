@@ -598,6 +598,7 @@ type User struct {
 	IsActive           *bool      `json:"is_active" db:"is_active"`
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
+	Channel            *int       `json:"channel"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -817,6 +818,24 @@ func (u *User) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(marshal(u))
 }
 
+func (u *User) isAuthorized() bool {
+	if u.Channel == nil {
+		if !u.IsProvider {
+			return true
+		} else {
+			return false
+		}
+	}
+
+	if u.IsProvider && *u.Channel == 0 {
+		return true
+	}
+	if !u.IsProvider && *u.Channel == 1 {
+		return true
+	}
+	return false
+}
+
 func (u *User) login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -837,12 +856,19 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Passwords are: %v, %v", u.Password, pass)
+	if ok := u.isAuthorized(); !ok {
+		vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
 	if err := u.verifyPassword(u.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
+
 	w.Write(marshal(u))
 
 }

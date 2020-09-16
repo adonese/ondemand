@@ -324,3 +324,30 @@ func TestOrder_byID(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_isAuthorized(t *testing.T) {
+
+	var zero = int(0)
+	var one = int(1)
+
+	tests := []struct {
+		name   string
+		fields *User
+		want   bool
+	}{
+		{"is_provider and null", &User{IsProvider: true}, false},
+		{"!is_provider and one", &User{IsProvider: false, Channel: &one}, true},
+		{"is_provider and zero", &User{IsProvider: true, Channel: &zero}, true},
+		{"is_provider and one", &User{IsProvider: true, Channel: &one}, false},
+		{"!is_provider and zero", &User{IsProvider: false, Channel: &zero}, false},
+		{"!is_provider and null", &User{IsProvider: false, Channel: nil}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := tt.fields.isAuthorized(); got != tt.want {
+				t.Errorf("User.isAuthorized() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
