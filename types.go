@@ -747,7 +747,7 @@ type User struct {
 	Description        *string    `json:"description" db:"description"`
 	Channel            *int       `json:"channel"`
 	Image              *string    `json:"image"`
-	ImagePath          string     `json:"path" db:"path"`
+	ImagePath          *string    `json:"path" db:"path"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -1118,9 +1118,9 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		if path, err = img.store(); err != nil {
 			log.Printf("error in saving data: %v", err)
 		}
-		u.ImagePath = path
+		*u.ImagePath = path
 	} else {
-		u.ImagePath = ""
+		*u.ImagePath = ""
 	}
 
 	if err := u.saveUser(); err != nil {
