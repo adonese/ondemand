@@ -1,14 +1,23 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
+
+	im "image"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -196,6 +205,144 @@ type Order struct {
 	Provider    *User  `json:"provider,omitempty"`
 	UserProfile *User  `json:"user,omitempty"` //*nice*
 	CustomerProvider
+}
+
+//Image stored in fs
+type Image struct {
+	ID   int    `json:"id" db:"id"`
+	UUID string `json:"uuid" db:"uuid"`
+	Data string `json:"data"`
+}
+
+func (i *Image) init(uuid string) bool {
+	i.UUID = uuid
+	return true
+}
+
+func (i *Image) store() (string, error) {
+
+	var ext string
+
+	if strings.HasPrefix(i.Data, "data:image/png") {
+		ext = "png"
+	} else {
+		ext = "jpg"
+	}
+
+	if strings.HasPrefix(i.Data, "data:image/") {
+		// temp = i.Data
+		index := strings.Index(i.Data, ",")
+		i.Data = i.Data[index+1:]
+	}
+
+	r, err := base64.StdEncoding.DecodeString(i.Data)
+	if err != nil {
+		panic(err)
+	}
+
+	var img im.Image
+	f, err := os.OpenFile("data/"+i.UUID+"."+ext, os.O_WRONLY|os.O_CREATE, 0777)
+	if err != nil {
+		return "", err
+	}
+
+	switch ext {
+	case "png":
+		img, err = png.Decode(bytes.NewReader(r))
+		if err != nil {
+			return "", err
+		}
+		png.Encode(f, img)
+		return "data/" + i.UUID + "." + ext, nil
+	case "jpg":
+		img, err = jpeg.Decode(bytes.NewReader(r))
+		if err != nil {
+			return "", err
+		}
+		if err != nil {
+			return "", err
+		}
+		jpeg.Encode(f, img, nil)
+		return "data/" + i.UUID + "." + ext, nil
+	}
+
+	return "data/" + i.UUID + "." + ext, nil
+
+}
+
+func (i *Image) getBytes(path string) ([]byte, error) {
+	if d, err := ioutil.ReadFile("data/" + path); err != nil {
+		return nil, err
+	} else {
+
+		return d, nil
+
+	}
+}
+
+func (i *Image) getString(uuid string) (string, error) {
+
+	if d, err := ioutil.ReadFile("data/" + uuid + ".png"); err != nil {
+		return "", err
+	} else {
+		data := base64.RawStdEncoding.EncodeToString(d)
+		return data, nil
+
+	}
+}
+
+func (i *Image) getHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json; charset=utf-8")
+}
+
+func (i *Image) getFileHandler(w http.ResponseWriter, r *http.Request) {
+
+	name := r.URL.Query().Get("path")
+	if name == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	f, err := i.getBytes(name)
+	if err != nil {
+		log.Printf("The error is: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	s := strconv.Itoa(len(f))
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", s)
+	io.Copy(w, bytes.NewReader(f))
+}
+
+func (i *Image) storeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "empty_request", Message: err.Error()}
+		w.Write(marshal(verr))
+		return
+	}
+	defer r.Body.Close()
+	if err := json.Unmarshal(data, i); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "marshaling_error", Message: err.Error()}
+		w.Write(marshal(verr))
+		return
+	}
+	// i.init()
+
+	if _, err = i.store(); err != nil {
+		log.Printf("unable to store file: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "server_error", Message: err.Error()}
+		w.Write(marshal(verr))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+
 }
 
 func (c *Order) verify() bool {
@@ -599,6 +746,8 @@ type User struct {
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
 	Channel            *int       `json:"channel"`
+	Image              *string    `json:"image"`
+	ImagePath          string     `json:"path" db:"path"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -959,12 +1108,26 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	u.generatePassword(u.Password)
 
+	if u.Image != nil {
+		img := &Image{}
+		imID := uuid.New().String()
+		img.init(imID)
+		img.Data = *u.Image
+		var path string
+		if path, err = img.store(); err != nil {
+			log.Printf("error in saving data: %v", err)
+		}
+		u.ImagePath = path
+
+	}
+
 	if err := u.saveUser(); err != nil {
 		vErr := errorHandler{Code: "db_error", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
+	u.Image = nil
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(u))
 

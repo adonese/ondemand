@@ -21,6 +21,13 @@ create table services (
 	name text
 );
 
+create table images (
+	id integer primary key,
+	uuid text not null,
+	path text not null
+);
+
+
 create table orders (
 	id integer primary key,
 	user_id integer,
@@ -63,13 +70,14 @@ create table suggestions (
 `
 
 var (
-	u    User
-	o    Order
-	i    Issue
-	s    Service
-	p    Provider
-	Sugg Suggestion
-	pus  Pushes
+	u     User
+	o     Order
+	i     Issue
+	s     Service
+	p     Provider
+	Sugg  Suggestion
+	pus   Pushes
+	image Image
 )
 
 var db, _ = getDB("test.db")
@@ -111,6 +119,9 @@ func main() {
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
 	mux.Handle("/push/save", http.HandlerFunc(pus.saveHandler))
 	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
+
+	mux.Handle("/image/save", http.HandlerFunc(image.storeHandler))
+	mux.Handle("/image/get", http.HandlerFunc(image.getFileHandler))
 
 	mux.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
 	mux.Handle("/ws2", http.HandlerFunc(p.ws))
