@@ -816,7 +816,7 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider) values(:username, :mobile, :password, :fullname, :is_provider)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path) values(:username, :mobile, :password, :fullname, :is_provider, :path)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
@@ -1109,6 +1109,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	u.generatePassword(u.Password)
 
 	if u.Image != nil {
+		log.Print("we should not be here")
 		img := &Image{}
 		imID := uuid.New().String()
 		img.init(imID)
@@ -1118,7 +1119,8 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("error in saving data: %v", err)
 		}
 		u.ImagePath = path
-
+	} else {
+		u.ImagePath = ""
 	}
 
 	if err := u.saveUser(); err != nil {
