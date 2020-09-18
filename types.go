@@ -1118,7 +1118,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		if path, err = img.store(); err != nil {
 			log.Printf("error in saving data: %v", err)
 		} else {
-			*u.ImagePath = path
+			u.ImagePath = &path
 		}
 
 	}
