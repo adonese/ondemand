@@ -968,11 +968,12 @@ type Provider struct {
 	User
 }
 
-func (p *Provider) getProviders() ([]Provider, error) {
+func (p *Provider) getProviders(id int) ([]Provider, error) {
 	var users []Provider
 
 	// here is the real shit
-	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil {
+	if err := p.db.Select(&users, `select u.* from users u
+	join userservices us on us.user_id = u.id where us.service_id = ?`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
@@ -1006,7 +1007,14 @@ func (p *Provider) byID(id int) (User, error) {
 func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
-	data, err := p.getProviders()
+	var id string
+	if id = r.URL.Query().Get("id"); id == "" {
+		verr := errorHandler{Code: "not_found", Message: "ID not found"}
+		w.Write(marshal(verr))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	data, err := p.getProviders(toInt(id))
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
@@ -1189,6 +1197,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	}
 
+	// this code is not clean; should be fixed
 	if err := u.saveUser(); err != nil {
 		vErr := errorHandler{Code: "db_error", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)

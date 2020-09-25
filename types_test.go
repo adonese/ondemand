@@ -230,14 +230,15 @@ func TestUser_getProviders(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
+		id      int
 		want    []User
 		wantErr bool
 	}{
-		{"get_providers", fields{}, []User{}, false},
+		{"get_providers", fields{}, 1, []User{}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pro.getProviders()
+			got, err := pro.getProviders(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("User.getProviders() error = %v, wantErr %v", err, tt.wantErr)
 				return
