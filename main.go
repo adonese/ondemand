@@ -103,6 +103,8 @@ func main() {
 	mux.Handle("/", Auth(http.HandlerFunc(login)))
 	mux.Handle("/login", http.HandlerFunc(u.login))
 	mux.Handle("/register", http.HandlerFunc(u.registerHandler))
+	mux.Handle("/otp", http.HandlerFunc(u.otpHander))
+	mux.Handle("/otp/check", http.HandlerFunc(u.otpCheckHandler))
 	mux.Handle("/user/update", http.HandlerFunc(u.updateHandler))
 	mux.Handle("/services", http.HandlerFunc(s.getHandler))
 	mux.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))
@@ -128,6 +130,7 @@ func main() {
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+	//TODO handle position in orders/request
 
 	http.ListenAndServe(":6662", mux)
 }

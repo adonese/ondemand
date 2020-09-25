@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -31,6 +32,9 @@ type result = map[string]interface{}
 
 var successfulCreated = make(map[string]interface{})
 
+const (
+	SMS_GATEWAY = "http://www.oursms.net/api/sendsms.php"
+)
 const (
 	NA = iota
 	Pending
@@ -873,10 +877,71 @@ func (u *User) getPassword(id int) (string, error) {
 	return u.Password, nil
 }
 
+func (u *User) sendSms(otp string) error {
+	if u.Mobile == "" {
+		return errors.New("mobile_not_provided")
+	}
+	v := url.Values{}
+	v.Add("username", os.Getenv("SMS_USERNAME"))
+	v.Add("password", os.Getenv("SMS_PASSWORD"))
+	v.Add("sender", os.Getenv("SMS_SENDER"))
+	v.Add("mobile", u.Mobile)
+	v.Add("otp", otp)
+
+	http.Get(SMS_GATEWAY + "?" + v.Encode())
+	return nil
+}
+
+func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
+	var mobile string
+
+	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
+		verr := errorHandler{Code: "mobile_not_found", Message: "Mobile not found"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	if otp, err := generateOTP(); err != nil {
+		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(marshal(verr))
+		return
+	} else {
+		w.Write(marshal(map[string]interface{}{"result": otp}))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+}
+
+func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
+	var mobile string
+
+	if mobile = r.URL.Query().Get("otp"); mobile == "" {
+		verr := errorHandler{Code: "otp_not_found", Message: "OTP not found"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	if ok := validateOTP(mobile); !ok {
+		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(marshal(verr))
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+}
+
 func (u *User) getProviders() ([]User, error) {
 	var users []User
 	tx := u.db.MustBegin()
 
+	// now we ought to fix this one
 	tx.Get(&users, "select * from users where is_provider = 1")
 	if err := tx.Commit(); err != nil {
 		log.Printf("Error in DB: %v", err)
@@ -906,6 +971,7 @@ type Provider struct {
 func (p *Provider) getProviders() ([]Provider, error) {
 	var users []Provider
 
+	// here is the real shit
 	if err := p.db.Select(&users, "select * from users where is_provider = 1"); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
@@ -1129,14 +1195,20 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
-	u.Image = nil
+	if u.Services != nil {
+		for _, v := range u.Services {
+			u.saveProviders(u.ID, v)
+		}
+
+	}
+	u.Image = nil // we don't want to pollute the user with their image
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(u))
 
 }
 
 func (u *User) saveProviders(user int, provider int) error {
-	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider", map[string]interface{}{"user": user, "provider": provider}); err != nil {
+	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider)", map[string]interface{}{"user": user, "provider": provider}); err != nil {
 		return err
 	}
 	return nil

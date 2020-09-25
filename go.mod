@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.2
+	github.com/pquerna/otp v1.2.0
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	google.golang.org/appengine v1.6.6 // indirect
 

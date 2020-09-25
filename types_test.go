@@ -351,3 +351,90 @@ func TestUser_isAuthorized(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_registerHandler(t *testing.T) {
+	type fields struct {
+		ID                 int
+		Username           string
+		Fullname           *string
+		Mobile             string
+		db                 *sqlx.DB
+		CreatedAt          *time.Time
+		Password           string
+		VerificationNumber *string
+		IsProvider         bool
+		Services           []int
+		IsActive           *bool
+		Score              int
+		Description        *string
+		Channel            *int
+		Image              *string
+		ImagePath          *string
+	}
+	type args struct {
+		w http.ResponseWriter
+		r *http.Request
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &User{
+				ID:                 tt.fields.ID,
+				Username:           tt.fields.Username,
+				Fullname:           tt.fields.Fullname,
+				Mobile:             tt.fields.Mobile,
+				db:                 tt.fields.db,
+				CreatedAt:          tt.fields.CreatedAt,
+				Password:           tt.fields.Password,
+				VerificationNumber: tt.fields.VerificationNumber,
+				IsProvider:         tt.fields.IsProvider,
+				Services:           tt.fields.Services,
+				IsActive:           tt.fields.IsActive,
+				Score:              tt.fields.Score,
+				Description:        tt.fields.Description,
+				Channel:            tt.fields.Channel,
+				Image:              tt.fields.Image,
+				ImagePath:          tt.fields.ImagePath,
+			}
+			u.registerHandler(tt.args.w, tt.args.r)
+		})
+	}
+}
+
+func TestUser_saveProviders(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	type args struct {
+		userID    int
+		serviceID int
+	}
+
+	tests := []struct {
+		name    string
+		fields  *User
+		args    args
+		wantErr bool
+	}{
+		{"with ids", &User{ID: 3, Services: []int{1, 2, 4, 6}}, args{userID: 5, serviceID: 1}, true},
+		{"nill", &User{Services: []int{1, 2, 4, 6}}, args{userID: 2, serviceID: 3}, true},
+		{"nul services", &User{ID: 2, Services: nil}, args{userID: 2, serviceID: 3}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if err := user.saveProviders(tt.args.userID, tt.args.serviceID); (err != nil) != tt.wantErr {
+				t.Errorf("User.saveProviders() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

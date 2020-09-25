@@ -16,9 +16,7 @@ func TestAuth(t *testing.T) {
 		name string
 		args args
 		want http.Handler
-	}{
-		// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := Auth(tt.args.next); !reflect.DeepEqual(got, tt.want) {
@@ -49,6 +47,45 @@ func Test_dbFields(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("dbFields() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_generateOTP(t *testing.T) {
+	tests := []struct {
+		name    string
+		want    string
+		wantErr bool
+	}{
+		{"generate-otp", "123456", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := generateOTP()
+			if err != nil {
+				t.Errorf("error is: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("generateOTP() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_validateOTP(t *testing.T) {
+
+	tests := []struct {
+		name string
+		args string
+		want bool
+	}{
+		{"validate_otp", "3441", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validateOTP(tt.args); got != tt.want {
+				t.Errorf("validateOTP() = %v, want %v", got, tt.want)
 			}
 		})
 	}
