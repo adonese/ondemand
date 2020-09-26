@@ -106,7 +106,6 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.Handle("/", Auth(http.HandlerFunc(login)))
 	r.Handle("/login", http.HandlerFunc(u.login))
 	r.Handle("/register", http.HandlerFunc(u.registerHandler))
 	r.Handle("/otp", http.HandlerFunc(u.otpHander))
@@ -143,6 +142,7 @@ func main() {
 	r.Handle("/admin/providers/{id}", http.HandlerFunc(u.getByIDHandler))
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
+	r.Handle("/admin/login", http.HandlerFunc(u.loginAdmin))
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)

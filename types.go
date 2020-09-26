@@ -1212,6 +1212,47 @@ func (u *User) isAuthorized() bool {
 }
 
 func (u *User) login(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
+	defer r.Body.Close()
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		vErr := errorHandler{Code: "bad_request", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	unmarshal(b, u)
+	u.cleanInput()
+	pass := u.Password
+	log.Printf("User model is: %#v", u)
+	if err := u.getUser(u.Username); err != nil {
+		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	log.Printf("Passwords are: %v, %v", u.Password, pass)
+	if ok := u.isAuthorized(); !ok {
+		vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	if err := u.verifyPassword(u.Password, pass); err != nil {
+		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+
+	w.Write(marshal(u))
+
+}
+
+func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
+
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
