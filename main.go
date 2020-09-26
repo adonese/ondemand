@@ -120,7 +120,9 @@ func main() {
 	mux.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
 	mux.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
 	mux.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
+
 	mux.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
+
 	// mux.Handle("/orders/status")
 	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
 	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
@@ -135,6 +137,8 @@ func main() {
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+
+	mux.Handle("/admin/providers", http.HandlerFunc(p.getProvidersHandler))
 	//TODO handle position in orders/request
 
 	corsHandler := cors.Default().Handler(mux)

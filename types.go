@@ -958,6 +958,7 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+	w.Header().Add("X-Total-Count", toString(len(data)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(users))
 }
