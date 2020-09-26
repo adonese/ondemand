@@ -141,6 +141,6 @@ func main() {
 	mux.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
 	//TODO handle position in orders/request
 
-	corsHandler := cors.Default().Handler(mux)
+	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}}).Handler(mux)
 	http.ListenAndServe(":6662", corsHandler)
 }
