@@ -5,7 +5,7 @@ services:
     ports:
       - "6662:6662"
       volumes:
-        .:/db
+        /home/ubuntu/db:/db
       environment:
         SMS_USERNAME: SEARCHFORME
         SMS_PASSWORD: a@2092002
