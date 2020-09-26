@@ -950,6 +950,7 @@ func (u *User) getProviders() ([]User, error) {
 }
 
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json")
 	users, err := u.getProviders()
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
