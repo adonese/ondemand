@@ -45,6 +45,10 @@ func dbFields(values interface{}) ([]string, error) {
 	return nil, errors.New("no data")
 }
 
+func toString(i int) string {
+	return strconv.Itoa(i)
+}
+
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)

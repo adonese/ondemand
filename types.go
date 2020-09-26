@@ -1024,6 +1024,7 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 
 	mData := make(map[string]interface{})
 	mData["result"] = data
+	w.Header().Add("X-Total-Count", toString(len(data)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(mData))
 }
