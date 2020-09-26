@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"reflect"
 	"strconv"
 	"time"
@@ -17,6 +18,9 @@ import (
 )
 
 func getDB(filename string) (*sqlx.DB, error) {
+	if path := os.Getenv("DB_PATH"); path != "" {
+		filename = path
+	}
 	db, err := sqlx.Connect("sqlite3", filename)
 	if err != nil {
 		log.Printf("Error in db: %v", err)
