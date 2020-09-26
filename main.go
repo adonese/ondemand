@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
 
@@ -103,44 +104,45 @@ func main() {
 	hub := newHub()
 	go hub.run()
 
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
 
-	mux.Handle("/", Auth(http.HandlerFunc(login)))
-	mux.Handle("/login", http.HandlerFunc(u.login))
-	mux.Handle("/register", http.HandlerFunc(u.registerHandler))
-	mux.Handle("/otp", http.HandlerFunc(u.otpHander))
-	mux.Handle("/otp/check", http.HandlerFunc(u.otpCheckHandler))
-	mux.Handle("/user/update", http.HandlerFunc(u.updateHandler))
-	mux.Handle("/services", http.HandlerFunc(s.getHandler))
-	mux.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))
-	mux.Handle("/new_order", http.HandlerFunc(o.saveHandler))
-	mux.Handle("/orders/new", http.HandlerFunc(o.saveHandler))
-	mux.Handle("/orders", http.HandlerFunc(o.getOrdersHandler))
-	mux.Handle("/orders/id", http.HandlerFunc(o.byUUID))
-	mux.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
-	mux.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
-	mux.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
+	r.Handle("/", Auth(http.HandlerFunc(login)))
+	r.Handle("/login", http.HandlerFunc(u.login))
+	r.Handle("/register", http.HandlerFunc(u.registerHandler))
+	r.Handle("/otp", http.HandlerFunc(u.otpHander))
+	r.Handle("/otp/check", http.HandlerFunc(u.otpCheckHandler))
+	r.Handle("/user/update", http.HandlerFunc(u.updateHandler))
+	r.Handle("/services", http.HandlerFunc(s.getHandler))
+	r.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))
+	r.Handle("/new_order", http.HandlerFunc(o.saveHandler))
+	r.Handle("/orders/new", http.HandlerFunc(o.saveHandler))
+	r.Handle("/orders", http.HandlerFunc(o.getOrdersHandler))
+	r.Handle("/orders/id", http.HandlerFunc(o.byUUID))
+	r.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
+	r.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
+	r.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
 
-	mux.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
+	r.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
 
-	// mux.Handle("/orders/status")
-	mux.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
-	mux.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
-	mux.Handle("/push/save", http.HandlerFunc(pus.saveHandler))
-	mux.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
+	// r.Handle("/orders/status")
+	r.Handle("/issues", http.HandlerFunc(i.getIssuesHandler))
+	r.Handle("/issues/new", http.HandlerFunc(i.createIssueHandler))
+	r.Handle("/push/save", http.HandlerFunc(pus.saveHandler))
+	r.Handle("/push/get", http.HandlerFunc(pus.getIDHandler))
 
-	mux.Handle("/image/save", http.HandlerFunc(image.storeHandler))
-	mux.Handle("/image/get", http.HandlerFunc(image.getFileHandler))
+	r.Handle("/image/save", http.HandlerFunc(image.storeHandler))
+	r.Handle("/image/get", http.HandlerFunc(image.getFileHandler))
 
-	mux.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
-	mux.Handle("/ws2", http.HandlerFunc(p.ws))
-	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	r.Handle("/suggestion", http.HandlerFunc(Sugg.saveHandler))
+	r.Handle("/ws2", http.HandlerFunc(p.ws))
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
 
-	mux.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
+	r.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
+	r.Handle("/admin/providers/{id}", http.HandlerFunc(u.getByIDHandler))
 	//TODO handle position in orders/request
 
-	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}}).Handler(mux)
+	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}}).Handler(r)
 	http.ListenAndServe(":6662", corsHandler)
 }

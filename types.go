@@ -22,6 +22,7 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/crypto/bcrypt"
@@ -949,6 +950,20 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
+func (u *User) getProvidersByID(id int) (User, error) {
+	var user User
+
+	// now we ought to fix this one
+	if err := u.db.Get(&user, "select * from users where id = ?", id); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return user, err
+	}
+	return user, nil
+}
+
+//getProvidersHandler
+// http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	users, err := u.getProviders()
@@ -959,6 +974,25 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("X-Total-Count", toString(len(users)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(users))
+}
+
+func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+
+	id := toInt(vars["id"])
+
+	w.Header().Add("content-type", "application/json")
+	users, err := u.getProvidersByID(id)
+	if err != nil {
+		vErr := errorHandler{Code: "not_found", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+	w.Header().Add("X-Total-Count", toString(1))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(users))
 }
