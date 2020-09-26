@@ -4,3 +4,10 @@ services:
     build: .
     ports:
       - "6662:6662"
+      environment:
+        SMS_USERNAME: SEARCHFORME
+        SMS_PASSWORD: a@2092002
+        SMS_SENDER: SEARCHFORMY
+
+
+# http://www.oursms.net/api/sendsms.php?username=SEARCHFORME&password=a@2092002&message=Hello there!&numbers=966576692747&sender=SEARCHFORMY&unicode=E&return=json
