@@ -1,6 +1,10 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/rs/cors"
+)
 
 var stmt = `
 create table users (
@@ -100,6 +104,7 @@ func main() {
 	go hub.run()
 
 	mux := http.NewServeMux()
+
 	mux.Handle("/", Auth(http.HandlerFunc(login)))
 	mux.Handle("/login", http.HandlerFunc(u.login))
 	mux.Handle("/register", http.HandlerFunc(u.registerHandler))
@@ -132,5 +137,6 @@ func main() {
 	})
 	//TODO handle position in orders/request
 
-	http.ListenAndServe(":6662", mux)
+	corsHandler := cors.Default().Handler(mux)
+	http.ListenAndServe(":6662", corsHandler)
 }
