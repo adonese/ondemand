@@ -141,8 +141,13 @@ func main() {
 
 	r.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
 	r.Handle("/admin/providers/{id}", http.HandlerFunc(u.getByIDHandler))
+	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
+	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
+
+	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
+	r.PathPrefix("/").Handler(spa)
 	//TODO handle position in orders/request
 
-	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}}).Handler(r)
+	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}, AllowedMethods: []string{"GET", "POST", "PUT"}}).Handler(r)
 	http.ListenAndServe(":6662", corsHandler)
 }

@@ -275,6 +275,12 @@ func (i *Image) store() (string, error) {
 
 }
 
+func (c *Order) all() []Order {
+	var orders []Order
+	c.db.Select(&orders, "select * from orders")
+	return orders
+}
+
 func (i *Image) getBytes(path string) ([]byte, error) {
 	if d, err := ioutil.ReadFile("data/" + path); err != nil {
 		return nil, err
@@ -494,7 +500,23 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	res := Pagination{Count: len(orders), Result: orders}
+	w.Header().Add("X-Total-Count", toString(len(orders)))
 	w.WriteHeader(http.StatusOK)
+
+	w.Write(marshal(res))
+}
+
+func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
+
+	/*
+		{"count": 12, "result": [{order_id, provider_id, order,}]}
+	*/
+	w.Header().Add("content-type", "application/json; charset=utf-8")
+
+	res := c.all()
+	w.Header().Add("X-Total-Count", toString(len(res)))
+	w.WriteHeader(http.StatusOK)
+
 	w.Write(marshal(res))
 }
 
@@ -515,6 +537,33 @@ func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
 	if err := c.db.Get(&res, `select u.fullname, u.mobile, o.*  from users u
 	join orders o on o.user_id = u.id where o.uuid = ?`, id); err != nil {
+		verr := errorHandler{Code: "db_err", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(res))
+}
+
+func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
+
+	/*
+		{"count": 12, "result": [{order_id, provider_id, order,}]}
+	*/
+	w.Header().Add("content-type", "application/json; charset=utf-8")
+
+	id := r.URL.Query().Get("uuid")
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var res OrdersUsers
+
+	if err := c.db.Get(&res, `select u.fullname, u.mobile, o.*  from users u
+	join orders o on o.user_id = u.id where o.id = ?`, id); err != nil {
 		verr := errorHandler{Code: "db_err", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
@@ -798,6 +847,12 @@ func (u *User) getTags() (string, []interface{}, error) {
 	if u.IsActive != nil {
 		ss = ss.Set("is_active", u.IsActive)
 	}
+	if u.IsProvider || !u.IsProvider {
+		ss = ss.Set("is_provider", u.IsProvider)
+	}
+	if u.Description != nil {
+		ss = ss.Set("description", u.Description)
+	}
 
 	ss = ss.Where("id = ?", u.ID)
 
@@ -966,25 +1021,86 @@ func (u *User) getProvidersByID(id int) (User, error) {
 // http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
-	users, err := u.getProviders()
-	if err != nil {
-		vErr := errorHandler{Code: "not_found", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
+	if r.Method == "GET" {
+		users, err := u.getProviders()
+		if err != nil {
+			vErr := errorHandler{Code: "not_found", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		w.Header().Add("X-Total-Count", toString(len(users)))
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(users))
+	}
+	// POSTing a new user
+	if r.Method == "POST" {
+		req, err := ioutil.ReadAll(r.Body)
+
+		if err != nil {
+			log.Printf("the error is: %v", err)
+			vErr := errorHandler{Code: "empty_body", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		defer r.Body.Close()
+		if err := json.Unmarshal(req, u); err != nil {
+			log.Printf("the error is: %v", err)
+			vErr := errorHandler{Code: "marshalling_err", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+
+		u.generatePassword(u.Password)
+		if err := u.saveUser(); err != nil {
+			log.Printf("the error is: %v", err)
+			vErr := errorHandler{Code: "db_err", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		w.Write(marshal(u))
 		return
 	}
-	w.Header().Add("X-Total-Count", toString(len(users)))
-	w.WriteHeader(http.StatusOK)
-	w.Write(marshal(users))
+
 }
 
 func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
-
+	w.Header().Add("content-type", "application/json")
 	vars := mux.Vars(r)
 
 	id := toInt(vars["id"])
+	if r.Method == "PUT" {
+		req, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			verr := errorHandler{Code: "marshalling_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+		defer r.Body.Close()
 
-	w.Header().Add("content-type", "application/json")
+		err = json.Unmarshal(req, u)
+		if err != nil {
+			verr := errorHandler{Code: "marshalling_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+		log.Printf("The marshal is: %v", string(req))
+		if err := u.updateUser(); err != nil {
+			verr := errorHandler{Code: "db_err", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+
+		return
+	}
+
 	users, err := u.getProvidersByID(id)
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
