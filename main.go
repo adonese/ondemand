@@ -138,7 +138,7 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
-	mux.Handle("/admin/providers", http.HandlerFunc(p.getProvidersHandler))
+	mux.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
 	//TODO handle position in orders/request
 
 	corsHandler := cors.Default().Handler(mux)

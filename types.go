@@ -939,13 +939,12 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 func (u *User) getProviders() ([]User, error) {
 	var users []User
-	tx := u.db.MustBegin()
 
 	// now we ought to fix this one
-	tx.Get(&users, "select * from users where is_provider = 1")
-	if err := tx.Commit(); err != nil {
+	if err := u.db.Select(&users, "select * from users where is_provider = 1"); err != nil {
+
 		log.Printf("Error in DB: %v", err)
-		return users, err
+		return nil, err
 	}
 	return users, nil
 }
@@ -958,7 +957,7 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
-	w.Header().Add("X-Total-Count", toString(len(data)))
+	w.Header().Add("X-Total-Count", toString(len(users)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(users))
 }
