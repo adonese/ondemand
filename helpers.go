@@ -21,7 +21,8 @@ func getDB(filename string) (*sqlx.DB, error) {
 	if path := os.Getenv("DB_PATH"); path != "" {
 		filename = path
 	}
-	db, err := sqlx.Connect("sqlite3", filename)
+
+	db, err := sqlx.Connect("sqlite3", "test.db")
 	if err != nil {
 		log.Printf("Error in db: %v", err)
 		return nil, err
