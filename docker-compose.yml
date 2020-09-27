@@ -4,15 +4,12 @@ services:
     build: .
     ports:
       - "6662:6662"
-      volumes:
-        /home/ubuntu/data/db:/db
-        /home/ubuntu/data/static:/data
-      environment:
-        SMS_USERNAME: SEARCHFORME
-        SMS_PASSWORD: a@2092002
-        SMS_SENDER: SEARCHFORMY
-        DB_PATH: /db/test.db
-        STATIC_PATH: /data/
-
-
-# http://www.oursms.net/api/sendsms.php?username=SEARCHFORME&password=a@2092002&message=Hello there!&numbers=966576692747&sender=SEARCHFORMY&unicode=E&return=json
+    volumes:
+      - /home/ubuntu/data/db:/db
+      - /home/ubuntu/data/static:/data
+    environment:
+      SMS_USERNAME: SEARCHFORME
+      SMS_PASSWORD: a@2092002
+      SMS_SENDER: SEARCHFORMY
+      DB_PATH: /db/test.db
+      STATIC_PATH: /data/
