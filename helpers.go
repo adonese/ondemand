@@ -91,9 +91,9 @@ func secret(n int) []byte {
 	return b
 }
 
-func generateOTP() (string, error) {
+func generateOTP(hash string) (string, error) {
 
-	secret := base32.StdEncoding.EncodeToString([]byte("12345678"))
+	secret := base32.StdEncoding.EncodeToString([]byte(hash + "12345678"))
 	passcode, err := totp.GenerateCodeCustom(secret, time.Now(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1,
@@ -109,9 +109,10 @@ func generateOTP() (string, error) {
 	return passcode, nil
 }
 
-func validateOTP(key string) bool {
+func validateOTP(key string, hash string) bool {
 
-	secret := base32.StdEncoding.EncodeToString([]byte("12345678"))
+	// allow to check otp against mobile number
+	secret := base32.StdEncoding.EncodeToString([]byte(hash + "12345678"))
 	if ok, err := totp.ValidateCustom(key, secret, time.Now(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1,
