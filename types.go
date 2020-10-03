@@ -281,6 +281,26 @@ func (c *Order) all() []Order {
 	return orders
 }
 
+func (c *Order) stats() []Order {
+	var orders []Order
+	c.db.Select(&orders, "select * from orders")
+	return orders
+}
+
+func (c *Order) statsHandler(w http.ResponseWriter, r *http.Request) {
+
+	var users []User
+	if r.URL.Query().Get("type") == "providers" {
+		// return providers with most used providers
+		c.db.Select(&users, "select * from orders ")
+		return
+	}
+
+	var orders []Order
+	c.db.Select(&orders, "select * from orders")
+	return
+}
+
 func (i *Image) getBytes(path string) ([]byte, error) {
 	if d, err := ioutil.ReadFile("data/" + path); err != nil {
 		return nil, err
@@ -958,7 +978,7 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if otp, err := generateOTP(); err != nil {
+	if otp, err := generateOTP(mobile); err != nil {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
@@ -973,15 +993,22 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
+	var otp string
+	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
+		verr := errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
 
-	if mobile = r.URL.Query().Get("otp"); mobile == "" {
+	if otp = r.URL.Query().Get("otp"); mobile == "" {
 		verr := errorHandler{Code: "otp_not_found", Message: "OTP not found"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
 	}
 
-	if ok := validateOTP(mobile); !ok {
+	if ok := validateOTP(otp, mobile); !ok {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
@@ -1261,6 +1288,7 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+	//TODO add is_admin to users table
 	unmarshal(b, u)
 	u.cleanInput()
 	pass := u.Password

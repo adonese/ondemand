@@ -143,6 +143,7 @@ func main() {
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
 	r.Handle("/admin/login", http.HandlerFunc(u.loginAdmin))
+	// r.Handle("/admin/stats", http.HandlerFunc(o.stats))
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)

@@ -62,7 +62,7 @@ func Test_generateOTP(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateOTP()
+			got, err := generateOTP("")
 			if err != nil {
 				t.Errorf("error is: %v", err)
 			}
@@ -84,7 +84,7 @@ func Test_validateOTP(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := validateOTP(tt.args); got != tt.want {
+			if got := validateOTP(tt.args, ""); got != tt.want {
 				t.Errorf("validateOTP() = %v, want %v", got, tt.want)
 			}
 		})
