@@ -66,6 +66,12 @@ create table userservices(
 	unique(user_id, service_id)
 	);
 
+create table views(
+	user_id integer not null,
+	count integer not null,
+	FOREIGN key (user_id) REFERENCES users(id),
+	unique(user_id)
+	);
 
 create table suggestions (
 		id integer not null PRIMARY key,
@@ -120,6 +126,7 @@ func main() {
 	r.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
 	r.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
 	r.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
+	r.Handle("/view", http.HandlerFunc(u.incrHandler))
 
 	r.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
 
