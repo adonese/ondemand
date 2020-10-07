@@ -459,7 +459,7 @@ func TestUser_incrView(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			user.ID = 2
-			if err := user.incrView(); (err != nil) != tt.wantErr {
+			if err := user.incrView(tt.id); (err != nil) != tt.wantErr {
 				t.Errorf("User.incrView() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
