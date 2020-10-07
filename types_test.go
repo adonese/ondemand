@@ -439,3 +439,29 @@ func TestUser_saveProviders(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_incrView(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	tests := []struct {
+		name    string
+		id      int
+		fields  *User
+		wantErr bool
+	}{
+		{"new test", 3, user, true},
+		{"new test", -100, user, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user.ID = 2
+			if err := user.incrView(); (err != nil) != tt.wantErr {
+				t.Errorf("User.incrView() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -1095,6 +1095,32 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (u *User) incrView(id int) error {
+	if _, err := u.db.Exec(`INSERT OR REPLACE INTO views
+	VALUES (?,
+	  COALESCE(
+		(SELECT count FROM views
+		   WHERE user_id=? ),
+		0) + 1);`, id, id); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *User) incrHandler(w http.ResponseWriter, r *http.Request) {
+	if id := r.URL.Query().Get("id"); id == "" {
+		verr := errorHandler{Code: "user_id_not_provided", Message: "ID not provided"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	} else {
+		u.incrView(toInt(id))
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+}
+
 func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	vars := mux.Vars(r)
