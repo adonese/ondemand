@@ -1176,8 +1176,10 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 	var users []Provider
 
 	// here is the real shit
+	// ok check is_active = 1
 	if err := p.db.Select(&users, `select u.* from users u
-	join userservices us on us.user_id = u.id where us.service_id = ?`, id); err != nil {
+	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1
+	order by score desc`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
