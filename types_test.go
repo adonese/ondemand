@@ -465,3 +465,93 @@ func TestUser_incrView(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_getAdmin(t *testing.T) {
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	type args struct {
+		username string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"data", args{"test"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if c, err := user.getServices(tt.args.username); (err != nil) != tt.wantErr {
+				t.Errorf("User.getAdmin() error = %v, wantErr %v", err, tt.wantErr)
+			} else if len(c) < 0 {
+				t.Errorf("User.getAdmin() length = %v, want length %v", c, tt.wantErr)
+
+			}
+
+		})
+	}
+}
+
+func TestUser_fetchServices(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	type args struct {
+		username string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"data", args{"test"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if c, err := user.fetchServices(tt.args.username); err != nil {
+				t.Errorf("User.getAdmin() error = %v, wantErr %v", err, tt.wantErr)
+			} else if len(c) > 0 {
+				t.Errorf("User.getAdmin() length = %v, want length %v", c, tt.wantErr)
+
+			}
+
+		})
+	}
+}
+
+func TestUser_changePassword(t *testing.T) {
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	type args struct {
+		mobile      string
+		rawPassword string
+	}
+	tests := []struct {
+		name   string
+		fields *User
+		args   args
+		want   bool
+	}{
+		{"testing mobile existing", user, args{"0123456789", "1111"}, false},
+		{"testing mobile existing", user, args{"0912141679", "12345678"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := user.changePassword(tt.args.mobile, tt.args.rawPassword); got != tt.want {
+				t.Errorf("User.changePassword() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

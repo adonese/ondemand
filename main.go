@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -151,6 +152,11 @@ func main() {
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
 	r.Handle("/admin/login", http.HandlerFunc(u.loginAdmin))
+	r.Handle("/password_reset", http.HandlerFunc(u.PasswordReset))
+	r.Handle("/success", http.HandlerFunc(u.success))
+	r.Handle("/fail", http.HandlerFunc(u.fail))
+	r.Handle("/otp/change_password", http.HandlerFunc(u.otpCheckHandler))
+	r.Handle("/_otp", http.HandlerFunc(u.otpPage))
 	// r.Handle("/admin/stats", http.HandlerFunc(o.stats))
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
@@ -158,5 +164,5 @@ func main() {
 	//TODO handle position in orders/request
 
 	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}, AllowedMethods: []string{"GET", "POST", "PUT"}}).Handler(r)
-	http.ListenAndServe(":6662", corsHandler)
+	log.Fatal(http.ListenAndServe(":6662", corsHandler))
 }

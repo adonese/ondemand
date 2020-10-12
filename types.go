@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	im "image"
@@ -30,6 +31,11 @@ import (
 
 type genericMap = map[string]string
 type result = map[string]interface{}
+
+type idName struct {
+	ID   int    `json:"id" db:"id"`
+	Name string `json:"name" db:"name"`
+}
 
 var successfulCreated = make(map[string]interface{})
 
@@ -822,6 +828,7 @@ type User struct {
 	Channel            *int       `json:"channel"`
 	Image              *string    `json:"image"`
 	ImagePath          *string    `json:"path" db:"path"`
+	ServiceName        []idName   `json:"service_names"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -943,6 +950,43 @@ func (u *User) getUser(username string) error {
 	return nil
 }
 
+func (u *User) getServices(username string) ([]int, error) {
+
+	//TODO update all queries to use Get for single result and select from multiple results
+	//todo add this
+	// source="post_id" reference="posts"
+	// "posts": [{"service_id": 1}]
+	var dest []int
+	if err := u.db.Select(&dest, `select us.service_id from users u
+	join userservices us on us.user_id = u.id where u.username = ?`, username); err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+func (u *User) fetchServices(username string) ([]idName, error) {
+	var dest []idName
+	if err := u.db.Select(&dest, `select us.service_id id, s.name from users u
+	join userservices us on us.user_id = u.id
+	join services s on s.id = us.service_id
+	where u.username = ?`, username); err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+func (u *User) changePassword(mobile string, rawPassword string) bool {
+
+	u.generatePassword(rawPassword)
+	log.Printf("the new password is: %v", u.Password)
+	if _, err := u.db.Exec("update users set password = ? where mobile = ?", mobile, u.Password); err != nil {
+		log.Printf("Error in password creation: %v", err)
+		return false
+	}
+	return true
+
+}
+
 func (u *User) getPassword(id int) (string, error) {
 
 	//TODO update all queries to use Get for single result and select from multiple results
@@ -966,6 +1010,25 @@ func (u *User) sendSms(otp string) error {
 
 	http.Get(SMS_GATEWAY + "?" + v.Encode())
 	return nil
+
+}
+
+func (u *User) otpPassword(w http.ResponseWriter, r *http.Request) {
+	// verify mobile and otp
+	mobile := r.URL.Query().Get("mobile")
+	otp := r.URL.Query().Get("otp")
+	password := r.URL.Query().Get("password")
+
+	if ok := validateOTP(otp, mobile); !ok {
+		http.Error(w, "wrong_otp", http.StatusBadRequest)
+		return
+	}
+
+	if ok := u.changePassword(mobile, password); !ok {
+		http.Error(w, "server_error", http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
@@ -973,6 +1036,11 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_found", Message: "Mobile not found"}
+
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
@@ -980,12 +1048,22 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 	if otp, err := generateOTP(mobile); err != nil {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
 		return
 	} else {
-		w.Write(marshal(map[string]interface{}{"result": otp}))
+		log.Printf("the referrer == :%v", r.Referer())
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(map[string]interface{}{"result": otp}))
+
 		return
 	}
 
@@ -1305,6 +1383,30 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 
 }
 
+//PasswordReset API for payment
+func (u *User) PasswordReset(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/layout.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+//PasswordReset API for payment
+func (u *User) success(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/success.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+//PasswordReset API for payment
+func (u *User) fail(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/fail.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+//PasswordReset API for payment
+func (u *User) otpPage(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/otp.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
 func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 
@@ -1334,12 +1436,16 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+
 	if err := u.verifyPassword(u.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
+	// add services here
+	u.Services, _ = u.getServices(u.Username)
+	u.ServiceName, _ = u.fetchServices(u.Username)
 
 	w.Write(marshal(u))
 
