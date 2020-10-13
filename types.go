@@ -132,17 +132,7 @@ func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Service) serviceDetailsHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-			{[
-		   [
-		        "عطل مكيف",
-				"مشكلة في السباكة",
-				"مشكلة في الكهرباء",
-				"صيانة عامة",
-				"آخرى"
-		    ]
-		    ]}
-	*/
+
 	svcs := []string{"عطل مكيف",
 		"مشكلة في السباكة",
 		"مشكلة في الكهرباء",
@@ -498,10 +488,6 @@ func (c *Order) saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
-
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	var orders []Order
 	var err error
@@ -534,9 +520,6 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	res := c.all()
@@ -548,9 +531,6 @@ func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	id := r.URL.Query().Get("uuid")
@@ -575,9 +555,6 @@ func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	id := r.URL.Query().Get("uuid")
@@ -601,9 +578,6 @@ func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
 
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
@@ -636,9 +610,7 @@ func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(res))
 		return
 	}
-	// user_id, uuid
-	// user_id, provider_id, uuid
-	// user_id, provider_id, uuid
+
 	if ok := c.verify(); !ok {
 		res := errorHandler{Code: "bad_request", Message: "Fields are missing"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -660,9 +632,6 @@ func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
 
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
@@ -696,9 +665,7 @@ func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) updateOrder(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -825,10 +792,12 @@ type User struct {
 	IsActive           *bool      `json:"is_active" db:"is_active"`
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
-	Channel            *int       `json:"channel"`
-	Image              *string    `json:"image"`
-	ImagePath          *string    `json:"path" db:"path"`
-	ServiceName        []idName   `json:"service_names"`
+
+	Channel     *int     `json:"channel"`
+	Image       *string  `json:"image"`
+	ImagePath   *string  `json:"path" db:"path"`
+	ServiceName []idName `json:"service_names"`
+	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -943,7 +912,7 @@ func (u *User) saveUserTX() error {
 func (u *User) getUser(username string) error {
 
 	//TODO update all queries to use Get for single result and select from multiple results
-	if err := u.db.Get(u, "select * from users where username = $1", username); err != nil {
+	if err := u.db.Get(u, "select * from users where username = ?", username); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
