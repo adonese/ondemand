@@ -1058,6 +1058,7 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	}
+	log.Printf("OTP is: %v, mobile is: %v", otp, mobile)
 
 	if ok := validateOTP(otp, mobile); !ok {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
