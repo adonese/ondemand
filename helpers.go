@@ -112,16 +112,16 @@ func generateOTP(hash string) (string, error) {
 func validateOTP(key string, hash string) bool {
 
 	secret := base32.StdEncoding.EncodeToString([]byte(hash + "12345678"))
-	if ok, err := totp.ValidateCustom(key, secret, time.Now(), totp.ValidateOpts{
+	if _, err := totp.ValidateCustom(key, secret, time.Now(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1,
 		Digits:    4,
 		Algorithm: otp.AlgorithmSHA1,
 	}); err != nil {
 		log.Printf("err is: %v", err)
-		return ok
+		return false
 	} else {
-		return ok
+		return true
 	}
 
 }

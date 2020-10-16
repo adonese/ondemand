@@ -1062,7 +1062,7 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	if ok := validateOTP(otp, mobile); !ok {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
 	} else {
