@@ -832,6 +832,8 @@ func (u *User) getTags() (string, []interface{}, error) {
 		ss = stmt.Set("username", u.Username)
 	}
 	if u.Password != "" {
+		// generate password here
+		u.generatePassword(u.Password)
 		ss = ss.Set("password", u.Password)
 	}
 	if u.Fullname != nil {
@@ -859,10 +861,12 @@ func (u *User) updateUser() error {
 
 	q, args, err := u.getTags()
 	if err != nil {
+		log.Printf("errors are: %v", err)
 		return err
 	}
 
 	if _, err := u.db.Exec(q, args...); err != nil {
+		log.Printf("Errors are: %v", err)
 		return err
 	}
 	return nil
@@ -1457,6 +1461,8 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+
 }
 
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
