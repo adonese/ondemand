@@ -1367,6 +1367,7 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Description is: %v", u.Description)
+	u.Image = nil
 	w.Write(marshal(u))
 
 }
@@ -1543,7 +1544,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this code is not clean; should be fixed
-	if u.IsProvider == true {
+	if u.IsProvider {
 		if err := u.saveProvider(); err != nil {
 			vErr := errorHandler{Code: "db_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
