@@ -886,6 +886,20 @@ func (u *User) saveUser() error {
 	return nil
 }
 
+func (u *User) saveProvider() error {
+
+	u.db.Exec(stmt)
+
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description)", u); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return err
+	} else {
+		id, _ := n.LastInsertId()
+		u.ID = int(id)
+	}
+	return nil
+}
+
 func (u *User) saveUserTX() error {
 
 	u.db.Exec(stmt)
@@ -1352,7 +1366,7 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
-
+	log.Printf("Description is: %v", u.Description)
 	w.Write(marshal(u))
 
 }
@@ -1529,12 +1543,22 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this code is not clean; should be fixed
-	if err := u.saveUser(); err != nil {
-		vErr := errorHandler{Code: "db_error", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
+	if u.IsProvider == true {
+		if err := u.saveProvider(); err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+	} else {
+		if err := u.saveUser(); err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
 	}
+
 	if u.Services != nil {
 		for _, v := range u.Services {
 			u.saveProviders(u.ID, v)
