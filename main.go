@@ -154,6 +154,7 @@ func main() {
 	r.Handle("/admin/login", http.HandlerFunc(u.loginAdmin))
 	r.Handle("/password_reset", http.HandlerFunc(u.PasswordReset))
 	r.Handle("/success", http.HandlerFunc(u.success))
+	r.Handle("/terms", http.HandlerFunc(u.terms))
 	r.Handle("/fail", http.HandlerFunc(u.fail))
 	r.Handle("/otp/change_password", http.HandlerFunc(u.otpCheckHandler))
 	r.Handle("/_otp", http.HandlerFunc(u.otpPage))

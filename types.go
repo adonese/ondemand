@@ -1384,6 +1384,11 @@ func (u *User) success(w http.ResponseWriter, r *http.Request) {
 	tmpl.Execute(w, "data goes here")
 }
 
+func (u *User) terms(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/terms.html"))
+	tmpl.Execute(w, nil)
+}
+
 //PasswordReset API for payment
 func (u *User) fail(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("password/fail.html"))
