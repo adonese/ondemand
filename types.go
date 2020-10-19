@@ -343,7 +343,7 @@ func (i *Image) getFileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *Image) storeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -1113,7 +1113,7 @@ func (u *User) getProvidersByID(id int) (User, error) {
 //getProvidersHandler
 // http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
 		users, err := u.getProviders()
 		if err != nil {
@@ -1188,7 +1188,7 @@ func (u *User) incrHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	vars := mux.Vars(r)
 
 	id := toInt(vars["id"])
@@ -1333,7 +1333,7 @@ func (u *User) isAuthorized() bool {
 }
 
 func (u *User) login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -1402,7 +1402,7 @@ func (u *User) otpPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
