@@ -101,7 +101,7 @@ func generateOTP(hash string) (string, error) {
 		Algorithm: otp.AlgorithmSHA1,
 	})
 	if err != nil {
-		panic(err)
+		// panic(err)
 		log.Printf("error in totp: %v", err)
 		return "", err
 	}
@@ -111,18 +111,17 @@ func generateOTP(hash string) (string, error) {
 
 func validateOTP(key string, hash string) bool {
 
-	// allow to check otp against mobile number
 	secret := base32.StdEncoding.EncodeToString([]byte(hash + "12345678"))
-	if ok, err := totp.ValidateCustom(key, secret, time.Now(), totp.ValidateOpts{
+	if _, err := totp.ValidateCustom(key, secret, time.Now(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1,
 		Digits:    4,
 		Algorithm: otp.AlgorithmSHA1,
 	}); err != nil {
 		log.Printf("err is: %v", err)
-		return ok
+		return false
 	} else {
-		return ok
+		return true
 	}
 
 }

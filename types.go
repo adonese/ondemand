@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	im "image"
@@ -30,6 +31,11 @@ import (
 
 type genericMap = map[string]string
 type result = map[string]interface{}
+
+type idName struct {
+	ID   int    `json:"id" db:"id"`
+	Name string `json:"name" db:"name"`
+}
 
 var successfulCreated = make(map[string]interface{})
 
@@ -126,17 +132,7 @@ func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Service) serviceDetailsHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-			{[
-		   [
-		        "عطل مكيف",
-				"مشكلة في السباكة",
-				"مشكلة في الكهرباء",
-				"صيانة عامة",
-				"آخرى"
-		    ]
-		    ]}
-	*/
+
 	svcs := []string{"عطل مكيف",
 		"مشكلة في السباكة",
 		"مشكلة في الكهرباء",
@@ -347,7 +343,7 @@ func (i *Image) getFileHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *Image) storeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -492,10 +488,6 @@ func (c *Order) saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
-
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	var orders []Order
 	var err error
@@ -528,9 +520,6 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	res := c.all()
@@ -542,9 +531,6 @@ func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	id := r.URL.Query().Get("uuid")
@@ -569,9 +555,6 @@ func (c *Order) byUUID(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 
-	/*
-		{"count": 12, "result": [{order_id, provider_id, order,}]}
-	*/
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	id := r.URL.Query().Get("uuid")
@@ -595,9 +578,6 @@ func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
 
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
@@ -630,9 +610,7 @@ func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(res))
 		return
 	}
-	// user_id, uuid
-	// user_id, provider_id, uuid
-	// user_id, provider_id, uuid
+
 	if ok := c.verify(); !ok {
 		res := errorHandler{Code: "bad_request", Message: "Fields are missing"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -654,9 +632,6 @@ func (c *Order) requestHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
 
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	body, err := ioutil.ReadAll(r.Body)
@@ -690,9 +665,7 @@ func (c *Order) setProviderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Order) updateOrder(w http.ResponseWriter, r *http.Request) {
-	/*
-		todo marshall and then return id (for tracking and further inquiries)
-	*/
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		res := errorHandler{Code: "bad_request", Message: "Error in request"}
@@ -819,9 +792,12 @@ type User struct {
 	IsActive           *bool      `json:"is_active" db:"is_active"`
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
-	Channel            *int       `json:"channel"`
-	Image              *string    `json:"image"`
-	ImagePath          *string    `json:"path" db:"path"`
+
+	Channel     *int     `json:"channel"`
+	Image       *string  `json:"image"`
+	ImagePath   *string  `json:"path" db:"path"`
+	ServiceName []idName `json:"service_names"`
+	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -856,6 +832,8 @@ func (u *User) getTags() (string, []interface{}, error) {
 		ss = stmt.Set("username", u.Username)
 	}
 	if u.Password != "" {
+		// generate password here
+		u.generatePassword(u.Password)
 		ss = ss.Set("password", u.Password)
 	}
 	if u.Fullname != nil {
@@ -883,10 +861,12 @@ func (u *User) updateUser() error {
 
 	q, args, err := u.getTags()
 	if err != nil {
+		log.Printf("errors are: %v", err)
 		return err
 	}
 
 	if _, err := u.db.Exec(q, args...); err != nil {
+		log.Printf("Errors are: %v", err)
 		return err
 	}
 	return nil
@@ -897,6 +877,20 @@ func (u *User) saveUser() error {
 	u.db.Exec(stmt)
 
 	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path) values(:username, :mobile, :password, :fullname, :is_provider, :path)", u); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return err
+	} else {
+		id, _ := n.LastInsertId()
+		u.ID = int(id)
+	}
+	return nil
+}
+
+func (u *User) saveProvider() error {
+
+	u.db.Exec(stmt)
+
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
@@ -936,11 +930,48 @@ func (u *User) saveUserTX() error {
 func (u *User) getUser(username string) error {
 
 	//TODO update all queries to use Get for single result and select from multiple results
-	if err := u.db.Get(u, "select * from users where username = $1", username); err != nil {
+	if err := u.db.Get(u, "select * from users where username = ?", username); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	}
 	return nil
+}
+
+func (u *User) getServices(username string) ([]int, error) {
+
+	//TODO update all queries to use Get for single result and select from multiple results
+	//todo add this
+	// source="post_id" reference="posts"
+	// "posts": [{"service_id": 1}]
+	var dest []int
+	if err := u.db.Select(&dest, `select us.service_id from users u
+	join userservices us on us.user_id = u.id where u.username = ?`, username); err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+func (u *User) fetchServices(username string) ([]idName, error) {
+	var dest []idName
+	if err := u.db.Select(&dest, `select us.service_id id, s.name from users u
+	join userservices us on us.user_id = u.id
+	join services s on s.id = us.service_id
+	where u.username = ?`, username); err != nil {
+		return nil, err
+	}
+	return dest, nil
+}
+
+func (u *User) changePassword(mobile string, rawPassword string) bool {
+
+	u.generatePassword(rawPassword)
+	log.Printf("the new password is: %v", u.Password)
+	if _, err := u.db.Exec("update users set password = ? where mobile = ?", mobile, u.Password); err != nil {
+		log.Printf("Error in password creation: %v", err)
+		return false
+	}
+	return true
+
 }
 
 func (u *User) getPassword(id int) (string, error) {
@@ -966,6 +997,25 @@ func (u *User) sendSms(otp string) error {
 
 	http.Get(SMS_GATEWAY + "?" + v.Encode())
 	return nil
+
+}
+
+func (u *User) otpPassword(w http.ResponseWriter, r *http.Request) {
+	// verify mobile and otp
+	mobile := r.URL.Query().Get("mobile")
+	otp := r.URL.Query().Get("otp")
+	password := r.URL.Query().Get("password")
+
+	if ok := validateOTP(otp, mobile); !ok {
+		http.Error(w, "wrong_otp", http.StatusBadRequest)
+		return
+	}
+
+	if ok := u.changePassword(mobile, password); !ok {
+		http.Error(w, "server_error", http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
@@ -973,6 +1023,11 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_found", Message: "Mobile not found"}
+
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
@@ -980,12 +1035,22 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 	if otp, err := generateOTP(mobile); err != nil {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
 		return
 	} else {
-		w.Write(marshal(map[string]interface{}{"result": otp}))
+		log.Printf("the referrer == :%v", r.Referer())
+		if strings.Contains(r.Referer(), "_otp") {
+			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(map[string]interface{}{"result": otp}))
+
 		return
 	}
 
@@ -1007,10 +1072,11 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	}
+	log.Printf("OTP is: %v, mobile is: %v", otp, mobile)
 
 	if ok := validateOTP(otp, mobile); !ok {
 		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
 	} else {
@@ -1047,7 +1113,7 @@ func (u *User) getProvidersByID(id int) (User, error) {
 //getProvidersHandler
 // http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
 		users, err := u.getProviders()
 		if err != nil {
@@ -1122,7 +1188,7 @@ func (u *User) incrHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 	vars := mux.Vars(r)
 
 	id := toInt(vars["id"])
@@ -1176,8 +1242,10 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 	var users []Provider
 
 	// here is the real shit
+	// ok check is_active = 1
 	if err := p.db.Select(&users, `select u.* from users u
-	join userservices us on us.user_id = u.id where us.service_id = ?`, id); err != nil {
+	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1
+	order by score desc`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
@@ -1265,7 +1333,7 @@ func (u *User) isAuthorized() bool {
 }
 
 func (u *User) login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -1298,13 +1366,43 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
-
+	log.Printf("Description is: %v", u.Description)
+	u.Image = nil
 	w.Write(marshal(u))
 
 }
 
+//PasswordReset API for payment
+func (u *User) PasswordReset(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/layout.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+//PasswordReset API for payment
+func (u *User) success(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/success.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+func (u *User) terms(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/terms.html"))
+	tmpl.Execute(w, nil)
+}
+
+//PasswordReset API for payment
+func (u *User) fail(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/fail.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
+//PasswordReset API for payment
+func (u *User) otpPage(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("password/otp.html"))
+	tmpl.Execute(w, "data goes here")
+}
+
 func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application/json")
+	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -1332,12 +1430,16 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+
 	if err := u.verifyPassword(u.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
+	// add services here
+	u.Services, _ = u.getServices(u.Username)
+	u.ServiceName, _ = u.fetchServices(u.Username)
 
 	w.Write(marshal(u))
 
@@ -1380,6 +1482,8 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+
 }
 
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -1445,12 +1549,22 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this code is not clean; should be fixed
-	if err := u.saveUser(); err != nil {
-		vErr := errorHandler{Code: "db_error", Message: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
+	if u.IsProvider {
+		if err := u.saveProvider(); err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+	} else {
+		if err := u.saveUser(); err != nil {
+			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
 	}
+
 	if u.Services != nil {
 		for _, v := range u.Services {
 			u.saveProviders(u.ID, v)
