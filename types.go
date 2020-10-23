@@ -890,7 +890,7 @@ func (u *User) saveProvider() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, :is_active)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
