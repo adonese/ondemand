@@ -798,6 +798,8 @@ type User struct {
 	ImagePath   *string  `json:"path" db:"path"`
 	ServiceName []idName `json:"service_names"`
 	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
+	City        string   `json:"city" db:"city"`
+	Whatsapp    *string  `json:"whatsapp" db:"whatsapp"`
 }
 
 func (u *User) generatePassword(password string) error {
@@ -890,7 +892,7 @@ func (u *User) saveProvider() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, :is_active)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active, city, whatsapp) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, :is_active, :city, :whatsapp)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
