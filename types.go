@@ -1057,11 +1057,15 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	} else {
+		// ACTUALLY sending an otp
+		u.Mobile = mobile
+		u.sendSms(otp)
 		log.Printf("the referrer == :%v", r.Referer())
 		if strings.Contains(r.Referer(), "_otp") {
 			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(map[string]interface{}{"result": otp}))
 
