@@ -58,11 +58,11 @@ func Test_generateOTP(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"generate-otp", "123456", true},
+		{"generate-otp", "00966556789882", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateOTP("")
+			got, err := generateOTP(tt.want)
 			if err != nil {
 				t.Errorf("error is: %v", err)
 			}
