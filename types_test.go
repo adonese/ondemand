@@ -555,3 +555,47 @@ func TestUser_changePassword(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_sendSms(t *testing.T) {
+
+	type args struct {
+		otp string
+	}
+	tests := []struct {
+		name    string
+		fields  *User
+		args    args
+		wantErr bool
+	}{
+		{"sendOtp", &User{Mobile: "966556789882"}, args{otp: "1456"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := &User{
+				ID:                 tt.fields.ID,
+				Username:           tt.fields.Username,
+				Fullname:           tt.fields.Fullname,
+				Mobile:             "966556789882",
+				db:                 tt.fields.db,
+				CreatedAt:          tt.fields.CreatedAt,
+				Password:           tt.fields.Password,
+				VerificationNumber: tt.fields.VerificationNumber,
+				IsProvider:         tt.fields.IsProvider,
+				Services:           tt.fields.Services,
+				IsActive:           tt.fields.IsActive,
+				Score:              tt.fields.Score,
+				Description:        tt.fields.Description,
+				Channel:            tt.fields.Channel,
+				Image:              tt.fields.Image,
+				ImagePath:          tt.fields.ImagePath,
+				ServiceName:        tt.fields.ServiceName,
+				IsAdmin:            tt.fields.IsAdmin,
+				City:               tt.fields.City,
+				Whatsapp:           tt.fields.Whatsapp,
+			}
+			if err := u.sendSms(tt.args.otp); (err != nil) != tt.wantErr {
+				t.Errorf("User.sendSms() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

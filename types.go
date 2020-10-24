@@ -22,6 +22,7 @@ import (
 	im "image"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/codingsince1985/geo-golang/openstreetmap"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -987,17 +988,28 @@ func (u *User) getPassword(id int) (string, error) {
 }
 
 func (u *User) sendSms(otp string) error {
+
+	/*
+		http://www.oursms.net/api/sendsms.php?username=SEARCHFORME&password=a@2092002&message=3344&numbers=00966556789882&sender=SEARCHFORMY&unicode=E&return=json*/
 	if u.Mobile == "" {
 		return errors.New("mobile_not_provided")
 	}
 	v := url.Values{}
-	v.Add("username", os.Getenv("SMS_USERNAME"))
-	v.Add("password", os.Getenv("SMS_PASSWORD"))
-	v.Add("sender", os.Getenv("SMS_SENDER"))
-	v.Add("mobile", u.Mobile)
-	v.Add("otp", otp)
+	v.Add("username", "SEARCHFORME")
+	v.Add("password", "a@2092002")
+	v.Add("sender", "SEARCHFORMY")
+	v.Add("numbers", u.Mobile)
+	v.Add("message", otp)
+	v.Add("return", "json")
+	v.Add("unicode", "E")
 
-	http.Get(SMS_GATEWAY + "?" + v.Encode())
+	url := SMS_GATEWAY + "?" + v.Encode()
+	log.Print(url)
+	res, err := http.Get(url)
+	if err != nil {
+		log.Printf("The error is: %v", err)
+	}
+	log.Printf("The response body is: %v", res)
 	return nil
 
 }
@@ -1045,11 +1057,16 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	} else {
+		// ACTUALLY sending an otp
+		u.Mobile = mobile
+		err := u.sendSms(otp)
+		log.Printf("Otp res: %v", err)
 		log.Printf("the referrer == :%v", r.Referer())
 		if strings.Contains(r.Referer(), "_otp") {
 			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(map[string]interface{}{"result": otp}))
 
@@ -1784,4 +1801,15 @@ func (p *Provider) ws(w http.ResponseWriter, r *http.Request) {
 		// close(accept)
 
 	}
+}
+
+// getCity demonstrates the different geocoding services
+func getCity(lat, lng float64) (string, error) {
+	v := openstreetmap.GeocoderWithURL("https://nominatim.openstreetmap.org/reverse?accept-language=en&format=json&")
+	d, err := v.ReverseGeocode(lat, lng)
+	if err != nil {
+		return "", err
+	}
+	return d.City, nil
+
 }
