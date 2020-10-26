@@ -1467,6 +1467,14 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
+	var id string
+	id = r.URL.Query().Get("id")
+	if id == "" {
+		id = "0"
+	}
+
+	u.ID = toInt(id)
+
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -1483,6 +1491,7 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("the data is: %#v", u)
 	u.cleanInput()
 	if r.Method == "PUT" {
 		if u.ID == 0 {
@@ -1508,6 +1517,14 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
+	var id string
+	id = r.URL.Query().Get("id")
+	if id == "" {
+		id = "0"
+	}
+
+	u.ID = toInt(id)
+
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -1524,6 +1541,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("the data is: %#v", u)
 	u.cleanInput()
 	if r.Method == "PUT" {
 		if u.ID == 0 {
