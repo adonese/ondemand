@@ -968,8 +968,9 @@ func (u *User) fetchServices(username string) ([]idName, error) {
 func (u *User) changePassword(mobile string, rawPassword string) bool {
 
 	u.generatePassword(rawPassword)
-	log.Printf("the new password is: %v", u.Password)
-	if _, err := u.db.Exec("update users set password = ? where mobile = ?", mobile, u.Password); err != nil {
+	log.Printf("the new password is: %v - previous password is: %v", u.Password, rawPassword)
+	log.Printf("the mobile is: %v", u.Mobile)
+	if _, err := u.db.Exec("update users set password = ? where mobile = ?", u.Password, mobile); err != nil {
 		log.Printf("Error in password creation: %v", err)
 		return false
 	}
@@ -1078,6 +1079,7 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	var otp string
+	var password string
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -1085,12 +1087,20 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if otp = r.URL.Query().Get("otp"); mobile == "" {
+	if otp = r.URL.Query().Get("otp"); otp == "" {
 		verr := errorHandler{Code: "otp_not_found", Message: "OTP not found"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
 	}
+
+	if password = r.URL.Query().Get("password"); password == "" {
+		verr := errorHandler{Code: "wrong_password", Message: "password was not entered"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
 	log.Printf("OTP is: %v, mobile is: %v", otp, mobile)
 
 	if ok := validateOTP(otp, mobile); !ok {
@@ -1098,10 +1108,19 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
-	} else {
-		w.WriteHeader(http.StatusOK)
+	}
+
+	if ok := u.changePassword(mobile, password); !ok {
+		verr := errorHandler{Code: "Error in otp", Message: "Error. Try again later or contact support."}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
 		return
 	}
+
+	verr := errorHandler{Code: "Sucessfull", Message: "You can close this page."}
+	w.WriteHeader(http.StatusOK)
+	w.Write(marshal(verr))
+	return
 
 }
 
