@@ -1099,7 +1099,9 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	} else {
+		verr := errorHandler{Code: "successfull", Message: "Successful"}
 		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(verr))
 		return
 	}
 
