@@ -831,9 +831,7 @@ func (u *User) getTags() (string, []interface{}, error) {
 	var ss sq.UpdateBuilder
 	stmt := sq.Update("users")
 	ss = stmt
-	if u.Username != "" {
-		ss = stmt.Set("username", u.Username)
-	}
+
 	if u.Password != "" {
 		// generate password here
 		u.generatePassword(u.Password)
@@ -844,20 +842,46 @@ func (u *User) getTags() (string, []interface{}, error) {
 	}
 	if u.Mobile != "" {
 		ss = ss.Set("mobile", u.Mobile)
+		ss = ss.Set("username", u.Mobile)
 	}
 	if u.IsActive != nil {
 		ss = ss.Set("is_active", u.IsActive)
 	}
-	if u.IsProvider || !u.IsProvider {
-		ss = ss.Set("is_provider", u.IsProvider)
-	}
 	if u.Description != nil {
 		ss = ss.Set("description", u.Description)
+	}
+	if u.ImagePath != nil {
+		ss = ss.Set("path", *u.ImagePath)
 	}
 
 	ss = ss.Where("id = ?", u.ID)
 
 	return ss.ToSql()
+}
+
+func (u *User) saveImage() error {
+	var err error
+	if u.Image != nil {
+		log.Print("we should not be here")
+		img := &Image{}
+		imID := uuid.New().String()
+		img.init(imID)
+		img.Data = *u.Image
+		var path string
+		if path, err = img.store(); err != nil {
+			log.Printf("error in saving data: %v", err)
+			return err
+		} else {
+			log.Printf("the image path is: %v", path)
+			u.ImagePath = &path
+			return nil
+		}
+
+	} else {
+		return errors.New("Image not found")
+	}
+	return nil
+
 }
 
 func (u *User) updateUser() error {
@@ -868,6 +892,8 @@ func (u *User) updateUser() error {
 		return err
 	}
 
+	// Store image HERE!
+	log.Print(u.saveImage())
 	if _, err := u.db.Exec(q, args...); err != nil {
 		log.Printf("Errors are: %v", err)
 		return err
@@ -1510,7 +1536,8 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("the data is: %#v", u)
+	log.Printf("the data is: %v", u)
+
 	u.cleanInput()
 	if r.Method == "PUT" {
 		if u.ID == 0 {
@@ -1524,6 +1551,17 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
+		}
+
+		if _, err := u.getProvidersByID(toInt(id)); err == nil && u.Services != nil {
+			u.deleteServices(toInt(id))
+			log.Printf("The services are: %v", u.Services)
+			for _, service := range u.Services {
+				u.saveProviders(toInt(id), service)
+			}
+
+		} else {
+			log.Printf("Error in userservices: %v", err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -1635,6 +1673,13 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 
 func (u *User) saveProviders(user int, provider int) error {
 	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider)", map[string]interface{}{"user": user, "provider": provider}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *User) deleteServices(user int) error {
+	if _, err := u.db.Exec("delete from userservices where user_id = ?", user); err != nil {
 		return err
 	}
 	return nil
