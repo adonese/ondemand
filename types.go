@@ -837,7 +837,9 @@ func (u *User) getTags() (string, []interface{}, error) {
 		u.generatePassword(u.Password)
 		ss = ss.Set("password", u.Password)
 	}
-	if u.Fullname != nil {
+	// test for nullable here
+	if u.Fullname != nil || *u.Fullname != "" {
+
 		ss = ss.Set("fullname", u.Fullname)
 	}
 	if u.Mobile != "" {
@@ -847,11 +849,12 @@ func (u *User) getTags() (string, []interface{}, error) {
 	if u.IsActive != nil {
 		ss = ss.Set("is_active", u.IsActive)
 	}
-	if u.Description != nil {
+	if u.Description != nil || *u.Description != "" {
 		ss = ss.Set("description", u.Description)
 	}
 	if u.ImagePath != nil {
-		ss = ss.Set("path", *u.ImagePath)
+		log.Printf("the getTags image path is: %v", *u.ImagePath)
+		ss = ss.Set("path", u.ImagePath)
 	}
 
 	ss = ss.Where("id = ?", u.ID)
@@ -886,6 +889,7 @@ func (u *User) saveImage() error {
 
 func (u *User) updateUser() error {
 
+	log.Print(u.saveImage())
 	q, args, err := u.getTags()
 	if err != nil {
 		log.Printf("errors are: %v", err)
@@ -893,7 +897,8 @@ func (u *User) updateUser() error {
 	}
 
 	// Store image HERE!
-	log.Print(u.saveImage())
+
+	log.Printf("the image path in db is: %v", *u.ImagePath)
 	if _, err := u.db.Exec(q, args...); err != nil {
 		log.Printf("Errors are: %v", err)
 		return err
