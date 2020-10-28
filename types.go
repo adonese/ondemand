@@ -838,9 +838,11 @@ func (u *User) getTags() (string, []interface{}, error) {
 		ss = ss.Set("password", u.Password)
 	}
 	// test for nullable here
-	if u.Fullname != nil || *u.Fullname != "" {
+	if u.Fullname != nil {
+		if *u.Fullname != "" {
+			ss = ss.Set("fullname", u.Fullname)
+		}
 
-		ss = ss.Set("fullname", u.Fullname)
 	}
 	if u.Mobile != "" {
 		ss = ss.Set("mobile", u.Mobile)
@@ -849,8 +851,11 @@ func (u *User) getTags() (string, []interface{}, error) {
 	if u.IsActive != nil {
 		ss = ss.Set("is_active", u.IsActive)
 	}
-	if u.Description != nil || *u.Description != "" {
-		ss = ss.Set("description", u.Description)
+	if u.Description != nil {
+		if *u.Description != "" {
+			ss = ss.Set("description", u.Description)
+		}
+
 	}
 	if u.ImagePath != nil {
 		log.Printf("the getTags image path is: %v", *u.ImagePath)
@@ -1562,7 +1567,7 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if _, err := u.getProvidersByID(toInt(id)); err == nil && u.Services != nil {
+		if _, err := u.getProvidersByID(toInt(id)); err == nil && len(u.Services) > 0 {
 			u.deleteServices(toInt(id))
 			log.Printf("The services are: %v", u.Services)
 			for _, service := range u.Services {
