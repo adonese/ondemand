@@ -856,6 +856,10 @@ func (u *User) getTags() (string, []interface{}, error) {
 		log.Printf("the getTags image path is: %v", *u.ImagePath)
 		ss = ss.Set("path", u.ImagePath)
 	}
+	if u.City != "" {
+		log.Printf("the getTags image path is: %v", *u.ImagePath)
+		ss = ss.Set("city", u.City)
+	}
 
 	ss = ss.Where("id = ?", u.ID)
 
