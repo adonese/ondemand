@@ -804,6 +804,9 @@ type User struct {
 }
 
 func (u *User) generatePassword(password string) error {
+	if len(u.Password) > 12 {
+		return errors.New("wrong_password_length")
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 8)
 	u.Password = string(hash)
 	return err
@@ -832,8 +835,9 @@ func (u *User) getTags() (string, []interface{}, error) {
 	stmt := sq.Update("users")
 	ss = stmt
 
-	if u.Password != "" {
-		// generate password here
+	if u.Password != "" { // memory BUG
+
+		log.Printf("the password in getTags is: %v", u.Password)
 		u.generatePassword(u.Password)
 		ss = ss.Set("password", u.Password)
 	}
@@ -904,11 +908,14 @@ func (u *User) updateUser() error {
 		log.Printf("errors are: %v", err)
 		return err
 	}
+	log.Printf("the sql query is: %s", q)
+	// log.Printf("the new value is: %#v", args[1].(string))
 
 	// Store image HERE!
 
 	log.Printf("the image path in db is: %v", *u.ImagePath)
 	if _, err := u.db.Exec(q, args...); err != nil {
+
 		log.Printf("Errors are: %v", err)
 		return err
 	}
@@ -1421,10 +1428,12 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+
 	unmarshal(b, u)
 	u.cleanInput()
 	pass := u.Password
 	log.Printf("User model is: %#v", u)
+
 	if err := u.getUser(u.Username); err != nil {
 		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
@@ -1543,14 +1552,16 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := unmarshal(b, u); err != nil {
+	if err := unmarshal(b, &u); err != nil {
 		vErr := errorHandler{Code: "marshalling_error", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(vErr))
 		return
 	}
 
-	log.Printf("the data is: %v", u)
+	log.Printf("the data is: %#v", u)
+	log.Printf("the data is: %#v", u.ID)
+	log.Printf("the data is: %#v", u.Password)
 
 	u.cleanInput()
 	if r.Method == "PUT" {
