@@ -778,13 +778,17 @@ func (c *Issue) createIssueHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+type UserService struct {
+	User
+	db *sqlx.DB
+}
+
 // User struct in the system
 type User struct {
-	ID                 int     `db:"id" json:"id"`
-	Username           string  `db:"username" json:"username"`
-	Fullname           *string `db:"fullname" json:"fullname"`
-	Mobile             string  `db:"mobile" json:"mobile"`
-	db                 *sqlx.DB
+	ID                 int        `db:"id" json:"id"`
+	Username           string     `db:"username" json:"username"`
+	Fullname           *string    `db:"fullname" json:"fullname"`
+	Mobile             string     `db:"mobile" json:"mobile"`
 	CreatedAt          *time.Time `db:"created_at" json:"created_at"`
 	Password           string     `db:"password" json:"password"`
 	VerificationNumber *string    `db:"verification_number" json:"verification_number"`
@@ -801,6 +805,7 @@ type User struct {
 	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
 	City        string   `json:"city" db:"city"`
 	Whatsapp    *string  `json:"whatsapp" db:"whatsapp"`
+	db          *sqlx.DB
 }
 
 func (u *User) generatePassword(password string) error {
@@ -1535,13 +1540,16 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
+	user := &User{db: u.db}
+
+	user.Password = "" //workaround previous bugs
 	var id string
 	id = r.URL.Query().Get("id")
 	if id == "" {
 		id = "0"
 	}
 
-	u.ID = toInt(id)
+	user.ID = toInt(id)
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -1552,7 +1560,7 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := unmarshal(b, &u); err != nil {
+	if err := unmarshal(b, &user); err != nil {
 		vErr := errorHandler{Code: "marshalling_error", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(vErr))
@@ -1560,27 +1568,27 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("the data is: %#v", u)
-	log.Printf("the data is: %#v", u.ID)
-	log.Printf("the data is: %#v", u.Password)
+	log.Printf("the data is: %#v", user.ID)
+	log.Printf("the data is: %#v", user.Password)
 
-	u.cleanInput()
+	user.cleanInput()
 	if r.Method == "PUT" {
-		if u.ID == 0 {
+		if user.ID == 0 {
 			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
-		if err := u.updateUser(); err != nil {
+		if err := user.updateUser(); err != nil {
 			vErr := errorHandler{Code: "update_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
 
-		if _, err := u.getProvidersByID(toInt(id)); err == nil && len(u.Services) > 0 {
-			u.deleteServices(toInt(id))
-			log.Printf("The services are: %v", u.Services)
+		if _, err := user.getProvidersByID(toInt(id)); err == nil && len(user.Services) > 0 {
+			user.deleteServices(toInt(id))
+			log.Printf("The services are: %v", user.Services)
 			for _, service := range u.Services {
 				u.saveProviders(toInt(id), service)
 			}
