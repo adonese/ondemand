@@ -398,7 +398,7 @@ func (c *Order) get(id int) ([]Order, error) {
 func (c *Order) getProviders(id int) ([]Order, error) {
 	var services []Order
 
-	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
+	if err := c.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
 		return nil, err
 	}
 
@@ -411,12 +411,12 @@ func (c *Order) getProvidersX(id int) ([]Order, error) {
 
 	c.db.Exec(stmt)
 
-	if err := u.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
+	if err := c.db.Select(&services, "select * from orders where provider_id = ?", id); err != nil {
 		return nil, err
 	}
 
 	for idx, v := range services {
-		if err := u.db.Get(&user, "select * from users where id = ?", v.UserID); err != nil {
+		if err := c.db.Get(&user, "select * from users where id = ?", v.UserID); err != nil {
 			log.Print(err.Error())
 			return nil, err
 		}
@@ -871,7 +871,7 @@ func (u *User) getTags() (string, []interface{}, error) {
 		ss = ss.Set("path", u.ImagePath)
 	}
 	if u.City != "" {
-		log.Printf("the getTags image path is: %v", *u.ImagePath)
+
 		ss = ss.Set("city", u.City)
 	}
 
@@ -918,7 +918,7 @@ func (u *User) updateUser() error {
 
 	// Store image HERE!
 
-	log.Printf("the image path in db is: %v", *u.ImagePath)
+	log.Printf("the image path in db is: %v", u.ImagePath)
 	if _, err := u.db.Exec(q, args...); err != nil {
 
 		log.Printf("Errors are: %v", err)
@@ -1132,6 +1132,8 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	var otp string
 	var password string
+	user := &User{db: u.db}
+
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
 		w.WriteHeader(http.StatusBadRequest)
@@ -1162,7 +1164,7 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ok := u.changePassword(mobile, password); !ok {
+	if ok := user.changePassword(mobile, password); !ok {
 		verr := errorHandler{Code: "Error in otp", Message: "Error. Try again later or contact support."}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
@@ -1425,6 +1427,8 @@ func (u *User) isAuthorized() bool {
 func (u *User) login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
+	user := &User{db: u.db}
+
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -1434,33 +1438,33 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	unmarshal(b, u)
-	u.cleanInput()
-	pass := u.Password
+	unmarshal(b, user)
+	user.cleanInput()
+	pass := user.Password
 	log.Printf("User model is: %#v", u)
 
-	if err := u.getUser(u.Username); err != nil {
+	if err := user.getUser(user.Username); err != nil {
 		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
-	log.Printf("Passwords are: %v, %v", u.Password, pass)
-	if ok := u.isAuthorized(); !ok {
+	log.Printf("Passwords are: %v, %v", user.Password, pass)
+	if ok := user.isAuthorized(); !ok {
 		vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
-	if err := u.verifyPassword(u.Password, pass); err != nil {
+	if err := user.verifyPassword(user.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
-	log.Printf("Description is: %v", u.Description)
-	u.Image = nil
-	w.Write(marshal(u))
+	log.Printf("Description is: %v", user.Description)
+	user.Image = nil
+	w.Write(marshal(user))
 
 }
 
@@ -1604,8 +1608,10 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
+func (us *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
+
+	user := &User{db: us.db}
 
 	var id string
 	id = r.URL.Query().Get("id")
@@ -1613,7 +1619,7 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		id = "0"
 	}
 
-	u.ID = toInt(id)
+	user.ID = toInt(id)
 
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
@@ -1624,23 +1630,23 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := unmarshal(b, u); err != nil {
+	if err := unmarshal(b, user); err != nil {
 		vErr := errorHandler{Code: "marshalling_error", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(vErr))
 		return
 	}
 
-	log.Printf("the data is: %#v", u)
-	u.cleanInput()
+	log.Printf("the data is: %#v", user)
+	user.cleanInput()
 	if r.Method == "PUT" {
-		if u.ID == 0 {
+		if user.ID == 0 {
 			vErr := errorHandler{Code: "empty_user_id", Message: "Empty user id"}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
-		if err := u.updateUser(); err != nil {
+		if err := user.updateUser(); err != nil {
 			vErr := errorHandler{Code: "update_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
@@ -1652,39 +1658,39 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// this is for POST only requests
-	if !u.valid() {
+	if !user.valid() {
 		vErr := errorHandler{Code: "bad_request", Message: "empty request fields"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
-	u.generatePassword(u.Password)
+	user.generatePassword(user.Password)
 
-	if u.Image != nil {
+	if user.Image != nil {
 		log.Print("we should not be here")
 		img := &Image{}
 		imID := uuid.New().String()
 		img.init(imID)
-		img.Data = *u.Image
+		img.Data = *user.Image
 		var path string
 		if path, err = img.store(); err != nil {
 			log.Printf("error in saving data: %v", err)
 		} else {
-			u.ImagePath = &path
+			user.ImagePath = &path
 		}
 
 	}
 
 	// this code is not clean; should be fixed
-	if u.IsProvider {
-		if err := u.saveProvider(); err != nil {
+	if user.IsProvider {
+		if err := user.saveProvider(); err != nil {
 			vErr := errorHandler{Code: "db_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
 	} else {
-		if err := u.saveUser(); err != nil {
+		if err := user.saveUser(); err != nil {
 			vErr := errorHandler{Code: "db_error", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
@@ -1692,15 +1698,15 @@ func (u *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if u.Services != nil {
-		for _, v := range u.Services {
-			u.saveProviders(u.ID, v)
+	if user.Services != nil {
+		for _, v := range user.Services {
+			user.saveProviders(user.ID, v)
 		}
 
 	}
-	u.Image = nil // we don't want to pollute the user with their image
+	user.Image = nil // we don't want to pollute the user with their image
 	w.WriteHeader(http.StatusOK)
-	w.Write(marshal(u))
+	w.Write(marshal(user))
 
 }
 

@@ -82,14 +82,14 @@ create table suggestions (
 `
 
 var (
-	u     User
-	o     Order
-	i     Issue
-	s     Service
-	p     Provider
-	Sugg  Suggestion
-	pus   Pushes
-	image Image
+	userField User
+	o         Order
+	i         Issue
+	s         Service
+	p         Provider
+	Sugg      Suggestion
+	pus       Pushes
+	image     Image
 )
 
 var db, _ = getDB("test.db")
@@ -97,7 +97,7 @@ var accept = make(chan struct{ id int }, 256)
 
 func init() {
 
-	u.db = db
+	userField.db = db
 	o.db = db
 	i.db = db
 	s.db = db
@@ -113,11 +113,11 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.Handle("/login", http.HandlerFunc(u.login))
-	r.Handle("/register", http.HandlerFunc(u.registerHandler))
-	r.Handle("/otp", http.HandlerFunc(u.otpHander))
-	r.Handle("/otp/check", http.HandlerFunc(u.otpCheckHandler))
-	r.Handle("/user/update", http.HandlerFunc(u.updateHandler))
+	r.Handle("/login", http.HandlerFunc(userField.login))
+	r.Handle("/register", http.HandlerFunc(userField.registerHandler))
+	r.Handle("/otp", http.HandlerFunc(userField.otpHander))
+	r.Handle("/otp/check", http.HandlerFunc(userField.otpCheckHandler))
+	r.Handle("/user/update", http.HandlerFunc(userField.updateHandler))
 	r.Handle("/services", http.HandlerFunc(s.getHandler))
 	r.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))
 	r.Handle("/new_order", http.HandlerFunc(o.saveHandler))
@@ -127,7 +127,7 @@ func main() {
 	r.Handle("/orders/request", http.HandlerFunc(o.requestHandler))
 	r.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
 	r.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
-	r.Handle("/view", http.HandlerFunc(u.incrHandler))
+	r.Handle("/view", http.HandlerFunc(userField.incrHandler))
 
 	r.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
 
@@ -147,20 +147,20 @@ func main() {
 		serveWs(hub, w, r)
 	})
 
-	r.Handle("/admin/providers", http.HandlerFunc(u.getProvidersHandler))
-	r.Handle("/admin/providers/{id}", http.HandlerFunc(u.getByIDHandler))
+	r.Handle("/admin/providers", http.HandlerFunc(userField.getProvidersHandler))
+	r.Handle("/admin/providers/{id}", http.HandlerFunc(userField.getByIDHandler))
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
-	r.Handle("/admin/login", http.HandlerFunc(u.loginAdmin))
-	r.Handle("/password_reset", http.HandlerFunc(u.PasswordReset))
-	r.Handle("/success", http.HandlerFunc(u.success))
+	r.Handle("/admin/login", http.HandlerFunc(userField.loginAdmin))
+	r.Handle("/password_reset", http.HandlerFunc(userField.PasswordReset))
+	r.Handle("/success", http.HandlerFunc(userField.success))
 
-	r.Handle("/fail", http.HandlerFunc(u.fail))
-	r.Handle("/otp/change_password", http.HandlerFunc(u.otpCheckHandler))
-	r.Handle("/_otp", http.HandlerFunc(u.otpPage))
+	r.Handle("/fail", http.HandlerFunc(userField.fail))
+	r.Handle("/otp/change_password", http.HandlerFunc(userField.otpCheckHandler))
+	r.Handle("/_otp", http.HandlerFunc(userField.otpPage))
 	// r.Handle("/admin/stats", http.HandlerFunc(o.stats))
-	r.Handle("/terms/", http.HandlerFunc(u.terms))
-	r.Handle("/terms", http.HandlerFunc(u.terms))
+	r.Handle("/terms/", http.HandlerFunc(userField.terms))
+	r.Handle("/terms", http.HandlerFunc(userField.terms))
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)

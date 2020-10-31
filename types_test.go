@@ -176,7 +176,7 @@ func TestUser_getTags(t *testing.T) {
 		fields *User
 		want   string
 	}{
-		{"testing query builder", &User{db: testdb, Username: "mohamed ahmed", Password: "123456", Mobile: "0987375"}, "insert into users()"},
+		{"testing query builder", &User{db: testdb, Username: "mohamed ahmed", City: "323", Password: "123456", Mobile: "0987375"}, "insert into users()"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
