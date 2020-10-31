@@ -1087,6 +1087,7 @@ func (u *User) otpPassword(w http.ResponseWriter, r *http.Request) {
 
 func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 	var mobile string
+	user := &User{db: u.db}
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_found", Message: "Mobile not found"}
@@ -1111,8 +1112,8 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		// ACTUALLY sending an otp
-		u.Mobile = mobile
-		err := u.sendSms(otp)
+		user.Mobile = mobile
+		err := user.sendSms(otp)
 		if err != nil {
 			if strings.Contains(r.Referer(), "_otp") {
 				http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
@@ -1143,6 +1144,7 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	var otp string
 	var password string
+
 	user := &User{db: u.db}
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
