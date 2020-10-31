@@ -1113,6 +1113,17 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 		// ACTUALLY sending an otp
 		u.Mobile = mobile
 		err := u.sendSms(otp)
+		if err != nil {
+			if strings.Contains(r.Referer(), "_otp") {
+				http.Redirect(w, r, "/fail", http.StatusPermanentRedirect)
+				return
+			}
+			verr := errorHandler{Code: "otp_error", Message: err.Error()}
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(marshal(verr))
+			return
+		}
+
 		log.Printf("Otp res: %v", err)
 		log.Printf("the referrer == :%v", r.Referer())
 		if strings.Contains(r.Referer(), "_otp") {
