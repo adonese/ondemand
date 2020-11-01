@@ -1457,20 +1457,20 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 	log.Printf("User model is: %#v", u)
 
 	if err := user.getUser(user.Username); err != nil {
-		vErr := errorHandler{Code: "user_not_found", Message: err.Error()}
+		vErr := errorHandler{Code: "user_not_found", Message: "الحساب غير مسجّل"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
 	}
 	log.Printf("Passwords are: %v, %v", user.Password, pass)
-	if ok := user.isAuthorized(); !ok {
-		vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
+	// if ok := user.isAuthorized(); !ok {
+	// 	vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	w.Write(vErr.toJson())
+	// 	return
+	// }
 	if err := user.verifyPassword(user.Password, pass); err != nil {
-		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
+		vErr := errorHandler{Code: "wrong_password", Message: "كلمة المرور غير صحيحة"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
