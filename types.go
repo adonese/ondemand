@@ -1022,11 +1022,21 @@ func (u *User) changePassword(mobile string, rawPassword string) bool {
 	u.generatePassword(rawPassword)
 	log.Printf("the new password is: %v - previous password is: %v", u.Password, rawPassword)
 	log.Printf("the mobile is: %v", u.Mobile)
-	if _, err := u.db.Exec("update users set password = ? where mobile = ?", u.Password, mobile); err != nil {
+	if res, err := u.db.Exec("update users set password = ? where mobile = ?", u.Password, mobile); err != nil {
 		log.Printf("Error in password creation: %v", err)
+		log.Printf("Error in password creation: %v", err)
+		id, _ := res.LastInsertId()
+		rows, _ := res.RowsAffected()
+		log.Printf("Error in password creation: ids affected: %v - rows affected: %v", id, rows)
 		return false
+	} else {
+
+		rows, _ := res.RowsAffected()
+		if rows < 1 {
+			return false
+		}
+		return true
 	}
-	return true
 
 }
 
@@ -1144,26 +1154,43 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	var otp string
 	var password string
+	var json int
+	tmpl := template.Must(template.ParseFiles("password/fail.html"))
 
 	user := &User{db: u.db}
 
+	json = toInt(r.URL.Query().Get("json"))
+	log.Printf("the json is: %v", json)
+
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
-		verr := errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(marshal(verr))
+		verr := errorHandler{Code: "mobile_not_provided", Message: "لم يتم ادخال رقم الهاتف"}
+
+		if json != 1 {
+			tmpl.Execute(w, verr)
+			return
+		}
+		tmpl.Execute(w, verr)
 		return
 	}
 
 	if otp = r.URL.Query().Get("otp"); otp == "" {
-		verr := errorHandler{Code: "otp_not_found", Message: "OTP not found"}
-		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "otp_not_found", Message: "خطأ في رمز الOTP"}
+		if json != 1 {
+			tmpl.Execute(w, verr)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
 		return
 	}
 
 	if password = r.URL.Query().Get("password"); password == "" {
-		verr := errorHandler{Code: "wrong_password", Message: "password was not entered"}
-		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "wrong_password", Message: "لم يتم ادخال الرمز السري الجديد"}
+		if json != 1 {
+			tmpl.Execute(w, verr)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
 		return
 	}
@@ -1171,23 +1198,35 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("OTP is: %v, mobile is: %v", otp, mobile)
 
 	if ok := validateOTP(otp, mobile); !ok {
-		verr := errorHandler{Code: "otp_error", Message: "OTP error"}
-		w.WriteHeader(http.StatusBadRequest)
+		verr := errorHandler{Code: "otp_error", Message: "خطأ في الOTP"}
+		if json != 1 {
+			tmpl.Execute(w, verr)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(marshal(verr))
 		return
 	}
 
 	if ok := user.changePassword(mobile, password); !ok {
-		verr := errorHandler{Code: "Error in otp", Message: "Error. Try again later or contact support."}
+		verr := errorHandler{Code: "otp_error", Message: "خطأ في تعديل كلمة المرور. الرجاء المحاولة مرة آخرى"}
+
+		if json != 1 {
+			tmpl.Execute(w, verr)
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
 	}
 
-	verr := errorHandler{Code: "Sucessfull", Message: "You can close this page."}
-	w.WriteHeader(http.StatusOK)
+	verr := errorHandler{Code: "successfull", Message: "تم تعديل كلمة المرور بنجاح. الرجاء اغلاق هذه النافذة وادخال كلمة المرور الجديدة في ابحث لي."}
+	if json != 1 {
+		tmpl.Execute(w, verr)
+		return
+	}
+	w.WriteHeader(http.StatusInternalServerError)
 	w.Write(marshal(verr))
-	return
 
 }
 
