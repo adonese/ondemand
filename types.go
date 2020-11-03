@@ -94,6 +94,11 @@ func (c *Service) all() ([]Service, error) {
 	return services, nil
 }
 
+type En struct {
+	IsEn bool
+	Err  errorHandler
+}
+
 func (c *Service) getHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 			{[
@@ -1137,7 +1142,12 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Otp res: %v", err)
 		log.Printf("the referrer == :%v", r.Referer())
+		log.Printf("The lang is: %v", r.URL.Query().Get("lang"))
 		if strings.Contains(r.Referer(), "_otp") {
+			if strings.Contains(r.Referer(), "lang=en") {
+				http.Redirect(w, r, "/success?lang=en", http.StatusPermanentRedirect)
+				return
+			}
 			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
 			return
 		}
@@ -1155,28 +1165,50 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var otp string
 	var password string
 	var json int
-	tmpl := template.Must(template.ParseFiles("password/fail.html"))
+	var isEn bool
+
+	var tmpl *template.Template
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		isEn = true
+		log.Print("i'm forever here")
+		tmpl = template.Must(template.ParseFiles("password/fail_en.html"))
+	} else {
+		log.Print("wy the fuck i'm here")
+		tmpl = template.Must(template.ParseFiles("password/fail.html"))
+	}
 
 	user := &User{db: u.db}
 
 	json = toInt(r.URL.Query().Get("json"))
 	log.Printf("the json is: %v", json)
+	var verr errorHandler
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
-		verr := errorHandler{Code: "mobile_not_provided", Message: "لم يتم ادخال رقم الهاتف"}
+		if isEn {
+			verr = errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
+		} else {
+			verr = errorHandler{Code: "mobile_not_provided", Message: "لم يتم ادخال رقم الهاتف"}
+
+		}
 
 		if json != 1 {
-			tmpl.Execute(w, verr)
+			tmpl.Execute(w, En{isEn, verr})
 			return
 		}
-		tmpl.Execute(w, verr)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
 		return
 	}
 
 	if otp = r.URL.Query().Get("otp"); otp == "" {
-		verr := errorHandler{Code: "otp_not_found", Message: "خطأ في رمز الOTP"}
+		if isEn {
+			verr = errorHandler{Code: "otp_not_found", Message: otpErrEn}
+		} else {
+			verr = errorHandler{Code: "otp_not_found", Message: "خطأ في رمز الOTP"}
+		}
+
 		if json != 1 {
-			tmpl.Execute(w, verr)
+			tmpl.Execute(w, En{isEn, verr})
 			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1185,9 +1217,13 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if password = r.URL.Query().Get("password"); password == "" {
-		verr := errorHandler{Code: "wrong_password", Message: "لم يتم ادخال الرمز السري الجديد"}
+		if isEn {
+			verr = errorHandler{Code: "wrong_password", Message: wrongPasswordEn}
+		} else {
+			verr = errorHandler{Code: "wrong_password", Message: "لم يتم ادخال الرمز السري الجديد"}
+		}
 		if json != 1 {
-			tmpl.Execute(w, verr)
+			tmpl.Execute(w, En{isEn, verr})
 			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1198,9 +1234,15 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("OTP is: %v, mobile is: %v", otp, mobile)
 
 	if ok := validateOTP(otp, mobile); !ok {
-		verr := errorHandler{Code: "otp_error", Message: "خطأ في الOTP"}
+		if isEn {
+			verr = errorHandler{Code: "otp_error", Message: otpErrEn}
+
+		} else {
+			verr = errorHandler{Code: "otp_error", Message: "خطأ في الOTP"}
+
+		}
 		if json != 1 {
-			tmpl.Execute(w, verr)
+			tmpl.Execute(w, En{isEn, verr})
 			return
 		}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1209,10 +1251,16 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ok := user.changePassword(mobile, password); !ok {
-		verr := errorHandler{Code: "otp_error", Message: "خطأ في تعديل كلمة المرور. الرجاء المحاولة مرة آخرى"}
+		if isEn {
+			verr = errorHandler{Code: "otp_error", Message: "Error in changing password. Try again."}
+
+		} else {
+			verr = errorHandler{Code: "otp_error", Message: "خطأ في تعديل كلمة المرور. الرجاء المحاولة مرة آخرى"}
+
+		}
 
 		if json != 1 {
-			tmpl.Execute(w, verr)
+			tmpl.Execute(w, En{isEn, verr})
 			return
 		}
 		w.WriteHeader(http.StatusBadRequest)
@@ -1220,9 +1268,15 @@ func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verr := errorHandler{Code: "successfull", Message: "تم تعديل كلمة المرور بنجاح. الرجاء اغلاق هذه النافذة وادخال كلمة المرور الجديدة في ابحث لي."}
+	if isEn {
+		verr = errorHandler{Code: "successfull", Message: closePromptEn}
+
+	} else {
+		verr = errorHandler{Code: "successfull", Message: "تم تعديل كلمة المرور بنجاح. الرجاء اغلاق هذه النافذة وادخال كلمة المرور الجديدة في ابحث لي."}
+	}
+
 	if json != 1 {
-		tmpl.Execute(w, verr)
+		tmpl.Execute(w, En{isEn, verr})
 		return
 	}
 	w.WriteHeader(http.StatusInternalServerError)
@@ -1522,31 +1576,61 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 
 //PasswordReset API for payment
 func (u *User) PasswordReset(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("password/layout.html"))
-	tmpl.Execute(w, "data goes here")
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		tmpl := template.Must(template.ParseFiles("password/layout_en.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	} else {
+		tmpl := template.Must(template.ParseFiles("password/layout.html"))
+		tmpl.Execute(w, En{})
+	}
+
 }
 
 //PasswordReset API for payment
 func (u *User) success(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("password/success.html"))
-	tmpl.Execute(w, "data goes here")
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		tmpl := template.Must(template.ParseFiles("password/success_en.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	} else {
+		tmpl := template.Must(template.ParseFiles("password/success.html"))
+		tmpl.Execute(w, En{IsEn: false})
+	}
+
 }
 
 func (u *User) terms(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("password/terms.html"))
-	tmpl.Execute(w, nil)
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		tmpl := template.Must(template.ParseFiles("password/terms_en.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	} else {
+		tmpl := template.Must(template.ParseFiles("password/terms.html"))
+		tmpl.Execute(w, En{IsEn: false})
+	}
+
 }
 
 //PasswordReset API for payment
 func (u *User) fail(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("password/fail.html"))
-	tmpl.Execute(w, "data goes here")
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		tmpl := template.Must(template.ParseFiles("password/fail_en.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	} else {
+		tmpl := template.Must(template.ParseFiles("password/fail.html"))
+		tmpl.Execute(w, En{IsEn: false})
+	}
+
 }
 
 //PasswordReset API for payment
 func (u *User) otpPage(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("password/otp.html"))
-	tmpl.Execute(w, "data goes here")
+	if lang := r.URL.Query().Get("lang"); lang == "en" {
+		tmpl := template.Must(template.ParseFiles("password/otp_en.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	} else {
+		tmpl := template.Must(template.ParseFiles("password/otp.html"))
+		tmpl.Execute(w, En{IsEn: true})
+	}
+
 }
 
 func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
@@ -1986,3 +2070,12 @@ func getCity(lat, lng float64) (string, error) {
 	return d.City, nil
 
 }
+
+var (
+	wrongPassword   = "لم يتم ادخال الرمز السري الجديد"
+	wrongPasswordEn = "New password not supplied"
+	otpErr          = "خطأ في تعديل كلمة المرور. الرجاء المحاولة مرة آخرى"
+	otpErrEn        = "Error in OTP. Please try again later"
+	clostPrompt     = "تم تعديل كلمة المرور بنجاح. الرجاء اغلاق هذه النافذة وادخال كلمة المرور الجديدة في ابحث لي."
+	closePromptEn   = "Password updated successfully. You may close this window and enter the new password in Search Me App"
+)
