@@ -775,7 +775,7 @@ func (c *Issue) createIssueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	unmarshal(b, c)
 	if err := c.save(); err != nil {
-		vErr := errorHandler{Code: "db_error", Message: err.Error()}
+		vErr := errorHandler{Code: "db_err", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
@@ -1820,14 +1820,14 @@ func (us *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	// this code is not clean; should be fixed
 	if user.IsProvider {
 		if err := user.saveProvider(); err != nil {
-			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			vErr := errorHandler{Code: "db_err", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
 	} else {
 		if err := user.saveUser(); err != nil {
-			vErr := errorHandler{Code: "db_error", Message: err.Error()}
+			vErr := errorHandler{Code: "db_err", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
@@ -1944,7 +1944,7 @@ func (p *Pushes) getIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := p.getSignalID(toInt(id)); err != nil {
-		verr := errorHandler{Code: "db_error", Message: err.Error()}
+		verr := errorHandler{Code: "db_err", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 
@@ -1989,7 +1989,7 @@ func (s *Suggestion) saveHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.save(); err != nil {
-		verr := errorHandler{Code: "db_error", Message: err.Error()}
+		verr := errorHandler{Code: "db_err", Message: err.Error()}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
