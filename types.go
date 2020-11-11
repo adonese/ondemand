@@ -1103,6 +1103,17 @@ func (u *User) otpPassword(w http.ResponseWriter, r *http.Request) {
 func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	user := &User{db: u.db}
+	var noCacheHeaders = map[string]string{
+		"Expires":         "-1",
+		"Cache-Control":   "no-cache, private, max-age=0",
+		"Pragma":          "no-cache",
+		"X-Accel-Expires": "0",
+	}
+
+	// Set our NoCache headers
+	for k, v := range noCacheHeaders {
+		w.Header().Set(k, v)
+	}
 
 	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
 		verr := errorHandler{Code: "mobile_not_found", Message: "Mobile not found"}
