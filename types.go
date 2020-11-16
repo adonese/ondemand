@@ -810,6 +810,8 @@ type User struct {
 	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
 	City        string   `json:"city" db:"city"`
 	Whatsapp    *string  `json:"whatsapp" db:"whatsapp"`
+	Latitude    *string  `json:"latitude" db:"latitude"`
+	Longitude   *string  `json:"longitude" db:"longitude"`
 	db          *sqlx.DB
 }
 
