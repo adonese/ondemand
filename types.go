@@ -1543,7 +1543,7 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	sort.SliceStable(prov, func(i, j int) bool {
 		return prov[i].Haversine < prov[j].Haversine
 	})
-	log.Printf("Haversine is: ID1:%d %f-%f", prov[0].ID, prov[0].Haversine, prov[1].Haversine)
+	// log.Printf("Haversine is: ID1:%d %f-%f", prov[0].ID, prov[0].Haversine, prov[1].Haversine)
 
 	log.Printf("The data after sorting is: %#v", data)
 	mData := make(map[string]interface{})
