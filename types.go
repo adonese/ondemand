@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -810,8 +811,8 @@ type User struct {
 	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
 	City        string   `json:"city" db:"city"`
 	Whatsapp    *string  `json:"whatsapp" db:"whatsapp"`
-	Latitude    *string  `json:"latitude" db:"latitude"`
-	Longitude   *string  `json:"longitude" db:"longitude"`
+	Latitude    *float64 `json:"latitude" db:"latitude"`
+	Longitude   *float64 `json:"longitude" db:"longitude"`
 	db          *sqlx.DB
 }
 
@@ -1444,8 +1445,9 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type Provider struct {
-	Score2 int `json:"score2" db:"score2"`
-	db     *sqlx.DB
+	Score2    int `json:"score2" db:"score2"`
+	haversine float64
+	db        *sqlx.DB
 	User
 }
 
@@ -1455,7 +1457,7 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 	// here is the real shit
 	// ok check is_active = 1
 	if err := p.db.Select(&users, `select u.* from users u
-	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1
+	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1 and u.latitude not null and u.longitude not null
 	order by score desc`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
@@ -1491,12 +1493,37 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
 	var id string
+	var latitude, longitude float64
+
+	var lat, long string
+
 	if id = r.URL.Query().Get("id"); id == "" {
 		verr := errorHandler{Code: "not_found", Message: "ID not found"}
-		w.Write(marshal(verr))
 		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(verr))
 		return
 	}
+
+	// for latitude
+	if lat = r.URL.Query().Get("latitude"); lat == "" {
+		verr := errorHandler{Code: "not_found", Message: "Latutide not found"}
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(verr))
+
+		return
+	}
+
+	// for longitude
+	if long = r.URL.Query().Get("longitude"); long == "" {
+		verr := errorHandler{Code: "not_found", Message: "Longitude not found"}
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(verr))
+
+		return
+	}
+	latitude, _ = strconv.ParseFloat(lat, 64)
+	longitude, _ = strconv.ParseFloat(long, 64)
+
 	data, err := p.getProviders(toInt(id))
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -1505,9 +1532,23 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	var prov []Provider
+	for _, v := range data {
+		if v.Latitude != nil && v.Longitude != nil { // this is an uncessary check. We did it in db.
+			v.haversine = haverSine(*v.Latitude, latitude, *v.Longitude, longitude)
+			prov = append(prov, v)
+		}
+	}
+
+	sort.SliceStable(prov, func(i, j int) bool {
+		return prov[i].haversine < prov[j].haversine
+	})
+	log.Printf("haversine is: ID1:%d %f-%f", prov[0].ID, prov[0].haversine, prov[1].haversine)
+
+	log.Printf("The data after sorting is: %#v", data)
 	mData := make(map[string]interface{})
-	mData["result"] = data
-	w.Header().Add("X-Total-Count", toString(len(data)))
+	mData["result"] = prov
+	w.Header().Add("X-Total-Count", toString(len(prov)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(mData))
 }

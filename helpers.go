@@ -4,6 +4,7 @@ import (
 	"encoding/base32"
 	"errors"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -124,4 +125,23 @@ func validateOTP(key string, hash string) bool {
 		return true
 	}
 
+}
+
+//haverSine returns approximate distance between a pair of (lat1, lon1), (lat2, lon2)
+func haverSine(lat1, lat2, lon1, lon2 float64) float64 {
+
+	var R = 6371.0                            // Radius of the earth in km
+	var dLat = deg2rad(math.Abs(lat2 - lat1)) // deg2rad below
+	var dLon = deg2rad(math.Abs(lon2 - lon1))
+	var a = math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(deg2rad(lat1))*math.Cos(deg2rad(lat2))*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+
+	var c = 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	var d = R * c // Distance in km
+	return d
+}
+
+func deg2rad(deg float64) float64 {
+	return deg * math.Pi / 180
 }

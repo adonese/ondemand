@@ -90,3 +90,26 @@ func Test_validateOTP(t *testing.T) {
 		})
 	}
 }
+
+func Test_haverSine(t *testing.T) {
+	type args struct {
+		lat1 float64
+		lat2 float64
+		lon1 float64
+		lon2 float64
+	}
+	tests := []struct {
+		name string
+		args args
+		want float64
+	}{
+		{"calculating haversine", args{lat1: 24, lat2: 18, lon1: 21, lon2: 14}, 986.402},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := haverSine(tt.args.lat1, tt.args.lat2, tt.args.lon1, tt.args.lon2); got != tt.want {
+				t.Errorf("haverSine() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
