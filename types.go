@@ -1445,8 +1445,8 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type Provider struct {
-	Score2    int `json:"score2" db:"score2"`
-	haversine float64
+	Score2    int     `json:"score2" db:"score2"`
+	Haversine float64 `json:"distance"`
 	db        *sqlx.DB
 	User
 }
@@ -1535,15 +1535,15 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	var prov []Provider
 	for _, v := range data {
 		if v.Latitude != nil && v.Longitude != nil { // this is an uncessary check. We did it in db.
-			v.haversine = haverSine(*v.Latitude, latitude, *v.Longitude, longitude)
+			v.Haversine = haverSine(*v.Latitude, latitude, *v.Longitude, longitude)
 			prov = append(prov, v)
 		}
 	}
 
 	sort.SliceStable(prov, func(i, j int) bool {
-		return prov[i].haversine < prov[j].haversine
+		return prov[i].Haversine < prov[j].Haversine
 	})
-	log.Printf("haversine is: ID1:%d %f-%f", prov[0].ID, prov[0].haversine, prov[1].haversine)
+	log.Printf("Haversine is: ID1:%d %f-%f", prov[0].ID, prov[0].Haversine, prov[1].Haversine)
 
 	log.Printf("The data after sorting is: %#v", data)
 	mData := make(map[string]interface{})
