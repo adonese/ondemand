@@ -1708,12 +1708,12 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Passwords are: %v, %v", u.Password, pass)
-	if ok := u.isAuthorized(); !ok {
-		vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(vErr.toJson())
-		return
-	}
+	// if ok := u.isAuthorized(); !ok {
+	// 	vErr := errorHandler{Code: "access_denied", Message: "Not authorized"}
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	w.Write(vErr.toJson())
+	// 	return
+	// }
 
 	if err := u.verifyPassword(u.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: err.Error()}
