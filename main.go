@@ -117,6 +117,7 @@ func main() {
 	r.Handle("/register", http.HandlerFunc(userField.registerHandler))
 	r.Handle("/otp", http.HandlerFunc(userField.otpHander))
 	r.Handle("/otp/check", http.HandlerFunc(userField.otpCheckHandler))
+	r.Handle("/otp/verify", http.HandlerFunc(userField.verifyOTPhandler))
 	r.Handle("/user/update", http.HandlerFunc(userField.updateHandler))
 	r.Handle("/services", http.HandlerFunc(s.getHandler))
 	r.Handle("/services/problems", http.HandlerFunc(s.serviceDetailsHandler))

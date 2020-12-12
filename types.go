@@ -1181,6 +1181,39 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
+	var mobile string
+	var otp string
+
+	var verr errorHandler
+	if mobile = r.URL.Query().Get("mobile"); mobile == "" {
+
+		verr = errorHandler{Code: "mobile_not_provided", Message: "Mobile not provided"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	if otp = r.URL.Query().Get("otp"); otp == "" {
+
+		verr = errorHandler{Code: "otp_not_found", Message: otpErrEn}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	if ok := validateOTP(otp, mobile); !ok {
+
+		verr = errorHandler{Code: "otp_error", Message: "خطأ في الOTP"}
+
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func (u *User) otpCheckHandler(w http.ResponseWriter, r *http.Request) {
 	var mobile string
 	var otp string
