@@ -1182,6 +1182,7 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
+	r.Header.Add("content-type", "application/json")
 	var mobile string
 	var otp string
 
