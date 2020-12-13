@@ -804,16 +804,17 @@ type User struct {
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
 
-	Channel     *int     `json:"channel"`
-	Image       *string  `json:"image"`
-	ImagePath   *string  `json:"path" db:"path"`
-	ServiceName []idName `json:"service_names"`
-	IsAdmin     bool     `json:"is_admin" db:"is_admin"`
-	City        string   `json:"city" db:"city"`
-	Whatsapp    *string  `json:"whatsapp" db:"whatsapp"`
-	Latitude    *float64 `json:"latitude" db:"latitude"`
-	Longitude   *float64 `json:"longitude" db:"longitude"`
-	db          *sqlx.DB
+	Channel       *int     `json:"channel"`
+	Image         *string  `json:"image"`
+	ImagePath     *string  `json:"path" db:"path"`
+	ServiceName   []idName `json:"service_names"`
+	IsAdmin       bool     `json:"is_admin" db:"is_admin"`
+	City          string   `json:"city" db:"city"`
+	Whatsapp      *string  `json:"whatsapp" db:"whatsapp"`
+	Latitude      *float64 `json:"latitude" db:"latitude"`
+	Longitude     *float64 `json:"longitude" db:"longitude"`
+	MobileChecked *bool    `db:"mobile_checked"`
+	db            *sqlx.DB
 }
 
 func (u *User) generatePassword(password string) error {
@@ -1196,7 +1197,6 @@ func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if otp = r.URL.Query().Get("otp"); otp == "" {
-
 		verr = errorHandler{Code: "otp_not_found", Message: otpErrEn}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
@@ -1204,9 +1204,15 @@ func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ok := validateOTP(otp, mobile); !ok {
+		verr = errorHandler{Code: "otp_error", Message: "OTP Error"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+	//OTP is verified. NOW set the db
 
-		verr = errorHandler{Code: "otp_error", Message: "خطأ في الOTP"}
-
+	if _, err := u.db.Exec("update users set mobile_checked = ? where mobile = ?", 1, mobile), err != nil {
+		verr = errorHandler{Code: "db_err", Message: "Couldn't able to amend mobile checked"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
 		return
@@ -1657,6 +1663,13 @@ func (u *User) login(w http.ResponseWriter, r *http.Request) {
 	// }
 	if err := user.verifyPassword(user.Password, pass); err != nil {
 		vErr := errorHandler{Code: "wrong_password", Message: "كلمة المرور غير صحيحة"}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(vErr.toJson())
+		return
+	}
+
+	if user.MobileChecked == nil {
+		vErr := errorHandler{Code: "otp_not_confirmed", Message: "OTP not confirmed"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
