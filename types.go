@@ -1173,13 +1173,10 @@ func (u *User) otpHander(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/success", http.StatusPermanentRedirect)
 			return
 		}
-
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(map[string]interface{}{"result": otp}))
-
 		return
 	}
-
 }
 
 func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
@@ -1211,7 +1208,7 @@ func (u *User) verifyOTPhandler(w http.ResponseWriter, r *http.Request) {
 	}
 	//OTP is verified. NOW set the db
 
-	if _, err := u.db.Exec("update users set mobile_checked = ? where mobile = ?", 1, mobile), err != nil {
+	if _, err := u.db.Exec("update users set mobile_checked = ? where mobile = ?", 1, mobile); err != nil {
 		verr = errorHandler{Code: "db_err", Message: "Couldn't able to amend mobile checked"}
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(marshal(verr))
@@ -1357,6 +1354,18 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
+func (u *User) getUsers() ([]User, error) {
+	var users []User
+
+	// now we ought to fix this one
+	if err := u.db.Select(&users, "select * from users where is_provider = 0"); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return nil, err
+	}
+	return users, nil
+}
+
 func (u *User) getProvidersByID(id int) (User, error) {
 	var user User
 
@@ -1367,6 +1376,25 @@ func (u *User) getProvidersByID(id int) (User, error) {
 		return user, err
 	}
 	return user, nil
+}
+
+//getProvidersHandler
+// http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
+func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application/json; charset=utf-8")
+	if r.Method == "GET" {
+		users, err := u.getUsers()
+		if err != nil {
+			vErr := errorHandler{Code: "not_found", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(vErr.toJson())
+			return
+		}
+		w.Header().Add("X-Total-Count", toString(len(users)))
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(users))
+	}
+
 }
 
 //getProvidersHandler
