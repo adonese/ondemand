@@ -883,14 +883,16 @@ func (u *User) getTags() (string, []interface{}, error) {
 
 		ss = ss.Set("city", u.City)
 	}
-
+	if u.Score != 0 {
+		ss = ss.Set("score", u.Score)
+	}
 	if u.Latitude != nil {
 		ss = ss.Set("latitude", u.Latitude)
 	}
-
 	if u.Longitude != nil {
 		ss = ss.Set("longitude", u.Longitude)
 	}
+
 	ss = ss.Where("id = ?", u.ID)
 
 	return ss.ToSql()
