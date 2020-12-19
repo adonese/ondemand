@@ -1862,15 +1862,18 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if _, err := user.getProvidersByID(toInt(id)); err == nil && len(user.Services) > 0 {
-			user.deleteServices(toInt(id))
-			log.Printf("The services are: %v", user.Services)
+		log.Printf("user services are: %v", user.Services)
+
+		//
+		if len(u.Services) > 0 {
+			if _, err := u.db.Exec("delete * from userservices where user_id = ?", id); err != nil {
+				log.Printf("error in removing previous services: %v", err)
+			}
+
 			for _, service := range u.Services {
 				u.saveProviders(toInt(id), service)
 			}
 
-		} else {
-			log.Printf("Error in userservices: %v", err)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -1984,6 +1987,7 @@ func (us *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 
 func (u *User) saveProviders(user int, provider int) error {
 	if _, err := u.db.NamedExec("insert into userservices(user_id, service_id) values(:user, :provider)", map[string]interface{}{"user": user, "provider": provider}); err != nil {
+		log.Printf("Error in saving providers services: %v", err)
 		return err
 	}
 	return nil
