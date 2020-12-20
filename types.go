@@ -1509,6 +1509,10 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var services []int
+
+	u.db.Select(&services, "select service_id from userservices where user_id = ?", id)
+
 	users, err := u.getProvidersByID(id)
 	if err != nil {
 		vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -1516,6 +1520,7 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(vErr.toJson())
 		return
 	}
+	users.Services = services
 	w.Header().Add("X-Total-Count", toString(1))
 	w.WriteHeader(http.StatusOK)
 	w.Write(marshal(users))
