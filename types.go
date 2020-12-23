@@ -1603,6 +1603,15 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return
+	}else if r.Method == "DELETE"{
+		if _, err := u.db.Exec("delete from users where id = ?", id); err != nil {
+			verr := errorHandler{Code: "db_err", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
 
 	var services []int
