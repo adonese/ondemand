@@ -813,7 +813,7 @@ type User struct {
 	Whatsapp      *string  `json:"whatsapp" db:"whatsapp"`
 	Latitude      *float64 `json:"latitude" db:"latitude"`
 	Longitude     *float64 `json:"longitude" db:"longitude"`
-	MobileChecked *bool    `db:"mobile_checked"`
+	MobileChecked *bool    `json:"mobile_checked" db:"mobile_checked"`
 	db            *sqlx.DB
 }
 
@@ -895,7 +895,7 @@ func (u *User) getAdminTags() (string, []interface{}, error) {
 	if u.MobileChecked != nil {
 		ss = ss.Set("mobile_checked", u.MobileChecked)
 	}
-	
+
 	ss = ss.Set("is_provider", u.IsProvider)
 
 	ss = ss.Where("id = ?", u.ID)
@@ -1606,7 +1606,7 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return
-	}else if r.Method == "DELETE"{
+	} else if r.Method == "DELETE" {
 		if _, err := u.db.Exec("delete from users where id = ?", id); err != nil {
 			verr := errorHandler{Code: "db_err", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
