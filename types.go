@@ -892,6 +892,8 @@ func (u *User) getTags() (string, []interface{}, error) {
 	if u.Longitude != nil {
 		ss = ss.Set("longitude", u.Longitude)
 	}
+	
+	ss = ss.Set("is_provider", u.IsProvider)
 
 	ss = ss.Where("id = ?", u.ID)
 
