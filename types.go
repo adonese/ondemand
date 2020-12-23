@@ -844,7 +844,7 @@ func (u *User) verifyPassword(hash, password string) error {
 
 var getNames = make(map[string]bool)
 
-func (u *User) getTags() (string, []interface{}, error) {
+func (u *User) getAdminTags() (string, []interface{}, error) {
 	var ss sq.UpdateBuilder
 	stmt := sq.Update("users")
 	ss = stmt
@@ -900,6 +900,60 @@ func (u *User) getTags() (string, []interface{}, error) {
 	return ss.ToSql()
 }
 
+func (u *User) getTags() (string, []interface{}, error) {
+	var ss sq.UpdateBuilder
+	stmt := sq.Update("users")
+	ss = stmt
+
+	if u.Password != "" { // memory BUG
+
+		log.Printf("the password in getTags is: %v", u.Password)
+		u.generatePassword(u.Password)
+		ss = ss.Set("password", u.Password)
+	}
+	// test for nullable here
+	if u.Fullname != nil {
+		if *u.Fullname != "" {
+			ss = ss.Set("fullname", u.Fullname)
+		}
+
+	}
+	if u.Mobile != "" {
+		ss = ss.Set("mobile", u.Mobile)
+		ss = ss.Set("username", u.Mobile)
+	}
+	if u.IsActive != nil {
+		ss = ss.Set("is_active", u.IsActive)
+	}
+	if u.Description != nil {
+		if *u.Description != "" {
+			ss = ss.Set("description", u.Description)
+		}
+
+	}
+	if u.ImagePath != nil {
+		log.Printf("the getTags image path is: %v", *u.ImagePath)
+		ss = ss.Set("path", u.ImagePath)
+	}
+	if u.City != "" {
+
+		ss = ss.Set("city", u.City)
+	}
+	if u.Score != 0 {
+		ss = ss.Set("score", u.Score)
+	}
+	if u.Latitude != nil {
+		ss = ss.Set("latitude", u.Latitude)
+	}
+	if u.Longitude != nil {
+		ss = ss.Set("longitude", u.Longitude)
+	}
+
+	ss = ss.Where("id = ?", u.ID)
+
+	return ss.ToSql()
+}
+
 func (u *User) saveImage() error {
 	var err error
 	if u.Image != nil {
@@ -923,6 +977,28 @@ func (u *User) saveImage() error {
 	}
 	return nil
 
+}
+
+func (u *User) updateUserAdmin() error {
+
+	log.Print(u.saveImage())
+	q, args, err := u.getAdminTags()
+	if err != nil {
+		log.Printf("errors are: %v", err)
+		return err
+	}
+	log.Printf("the sql query is: %s", q)
+	// log.Printf("the new value is: %#v", args[1].(string))
+
+	// Store image HERE!
+
+	log.Printf("the image path in db is: %v", u.ImagePath)
+	if _, err := u.db.Exec(q, args...); err != nil {
+
+		log.Printf("Errors are: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (u *User) updateUser() error {
@@ -1519,7 +1595,7 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("The marshal is: %v", string(req))
-		if err := u.updateUser(); err != nil {
+		if err := u.updateUserAdmin(); err != nil {
 			verr := errorHandler{Code: "db_err", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(marshal(verr))
