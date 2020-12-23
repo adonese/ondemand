@@ -151,6 +151,7 @@ func main() {
 	r.Handle("/admin/providers", http.HandlerFunc(userField.getProvidersHandler))
 	r.Handle("/admin/users", http.HandlerFunc(userField.getUsersHandler))
 	r.Handle("/admin/providers/{id}", http.HandlerFunc(userField.getByIDHandler))
+	r.Handle("/admin/users/{id}", http.HandlerFunc(userField.getByIDHandler))
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
 	r.Handle("/admin/login", http.HandlerFunc(userField.loginAdmin))

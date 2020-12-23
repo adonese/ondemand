@@ -1356,6 +1356,19 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
+func (u *User) getProvidersWithViews() ([]UserViews, error) {
+	var users []UserViews
+
+	// now we ought to fix this one
+	if err := u.db.Select(&users, `select u.*, v.count from users u
+	left join views v on v.user_id = u.id where u.is_provider = 1`); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return nil, err
+	}
+	return users, nil
+}
+
 func (u *User) getUsers() ([]User, error) {
 	var users []User
 
@@ -1399,12 +1412,17 @@ func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type UserViews struct {
+	User
+	Count *int `json:"count" db:"count"`
+}
+
 //getProvidersHandler
 // http://localhost:3000/#/providers?filter=%7B%7D&order=ASC&page=1&perPage=10&sort=id
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		users, err := u.getProviders()
+		users, err := u.getProvidersWithViews()
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
