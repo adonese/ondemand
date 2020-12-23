@@ -892,6 +892,9 @@ func (u *User) getAdminTags() (string, []interface{}, error) {
 	if u.Longitude != nil {
 		ss = ss.Set("longitude", u.Longitude)
 	}
+	if u.MobileChecked != nil {
+		ss = ss.Set("mobile_checked", u.MobileChecked)
+	}
 	
 	ss = ss.Set("is_provider", u.IsProvider)
 
