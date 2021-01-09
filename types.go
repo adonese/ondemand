@@ -1185,6 +1185,23 @@ func (u *User) sendSms(otp string) error {
 	if u.Mobile == "" {
 		return errors.New("mobile_not_provided")
 	}
+
+	var number string
+	old := u.Mobile
+
+	if !strings.HasSuffix(u.Mobile, "00966") {
+		if strings.HasSuffix(u.Mobile, "0") {
+			number = "00966" + u.Mobile[1:]
+		} else {
+			number = "00966" + u.Mobile
+		}
+	} else {
+		number = u.Mobile
+	}
+
+	// fixing mobile number here..
+	u.Mobile = number
+
 	v := url.Values{}
 	v.Add("username", "SEARCHFORME")
 	v.Add("password", "a@2092002")
@@ -1194,13 +1211,33 @@ func (u *User) sendSms(otp string) error {
 	v.Add("return", "json")
 	v.Add("unicode", "E")
 
-	url := SMS_GATEWAY + "?" + v.Encode()
-	log.Print(url)
-	res, err := http.Get(url)
+	uri := SMS_GATEWAY + "?" + v.Encode()
+	log.Print(uri)
+	res, err := http.Get(uri)
+
 	if err != nil {
 		log.Printf("The error is: %v", err)
 	}
 	log.Printf("The response body is: %v", res)
+
+	// remove this part
+
+	// fixing mobile number here..
+	u.Mobile = number
+
+	vv := url.Values{}
+	vv.Add("username", "SEARCHFORME")
+	vv.Add("password", "a@2092002")
+	vv.Add("sender", "SEARCHFORMY")
+	vv.Add("numbers", old)
+	vv.Add("message", otp)
+	vv.Add("return", "json")
+	vv.Add("unicode", "E")
+	uri2 := SMS_GATEWAY + "?" + v.Encode()
+	log.Print(uri2)
+	http.Get(uri2)
+	//
+
 	return nil
 
 }
