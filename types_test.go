@@ -599,3 +599,25 @@ func TestUser_sendSms(t *testing.T) {
 		})
 	}
 }
+
+func Test_fixNumbers(t *testing.T) {
+	type args struct {
+		m string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"testing numbers", args{"٠١٢٣٤٥٦٧٨٩"}, "0123456789"},
+		{"123", args{"١٢٣"}, "123"},
+		{"1234", args{"0123456789"}, "0123456789"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := fixNumbers(tt.args.m); got != tt.want {
+				t.Errorf("fixNumbers() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -803,18 +804,46 @@ type User struct {
 	IsActive           *bool      `json:"is_active" db:"is_active"`
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
+	Channel            *int       `json:"channel"`
+	Image              *string    `json:"image"`
+	ImagePath          *string    `json:"path" db:"path"`
+	ServiceName        []idName   `json:"service_names"`
+	IsAdmin            bool       `json:"is_admin" db:"is_admin"`
+	City               string     `json:"city" db:"city"`
+	Whatsapp           *string    `json:"whatsapp" db:"whatsapp"`
+	Latitude           *float64   `json:"latitude" db:"latitude"`
+	Longitude          *float64   `json:"longitude" db:"longitude"`
+	MobileChecked      *bool      `json:"mobile_checked" db:"mobile_checked"`
+	db                 *sqlx.DB
+}
 
-	Channel       *int     `json:"channel"`
-	Image         *string  `json:"image"`
-	ImagePath     *string  `json:"path" db:"path"`
-	ServiceName   []idName `json:"service_names"`
-	IsAdmin       bool     `json:"is_admin" db:"is_admin"`
-	City          string   `json:"city" db:"city"`
-	Whatsapp      *string  `json:"whatsapp" db:"whatsapp"`
-	Latitude      *float64 `json:"latitude" db:"latitude"`
-	Longitude     *float64 `json:"longitude" db:"longitude"`
-	MobileChecked *bool    `json:"mobile_checked" db:"mobile_checked"`
-	db            *sqlx.DB
+func fixNumbers(text string) string {
+	//ToEnglishDigits Converts all Persian digits in the string to English digits.
+	//٠١٢٣٤٥٦٧٨٩
+	var checker = map[string]string{
+		"٠": "0",
+		"١": "1",
+		"٢": "2",
+		"٣": "3",
+		"٤": "4",
+		"٥": "5",
+		"٦": "6",
+		"٧": "7",
+		"٨": "8",
+		"٩": "9",
+	}
+	re := regexp.MustCompile("[٠-٩]+")
+	out := re.ReplaceAllFunc([]byte(text), func(s []byte) []byte {
+		out := ""
+		ss := string(s)
+		for _, ch := range ss {
+			o := checker[string(ch)]
+			out = out + o
+		}
+		return []byte(out)
+	})
+	return string(out)
+
 }
 
 func (u *User) generatePassword(password string) error {
@@ -1434,6 +1463,7 @@ func (u *User) getProviders() ([]User, error) {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
+
 	return users, nil
 }
 
@@ -1447,6 +1477,14 @@ func (u *User) getProvidersWithViews() ([]UserViews, error) {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
+
+	for _, v := range users {
+		if v.Whatsapp != nil {
+			*v.Whatsapp = fixNumbers(*v.Whatsapp)
+		}
+
+	}
+
 	return users, nil
 }
 
@@ -1652,6 +1690,14 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
 	}
+
+	for _, v := range users {
+		if v.Whatsapp != nil {
+			*v.Whatsapp = fixNumbers(*v.Whatsapp)
+		}
+
+	}
+
 	return users, nil
 }
 
