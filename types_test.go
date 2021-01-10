@@ -621,3 +621,26 @@ func Test_fixNumbers(t *testing.T) {
 		})
 	}
 }
+
+func Test_handleMobile(t *testing.T) {
+	type args struct {
+		m string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"testing with zero", args{"051234"}, "0096651234"},
+		{"testing no zero", args{"51234"}, "0096651234"},
+		{"testing with 966", args{"0096651234"}, "0096651234"},
+		{"testing with 966", args{"96651234"}, "0096651234"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := handleMobile(tt.args.m); got != tt.want {
+				t.Errorf("handleMobile() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

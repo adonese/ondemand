@@ -1168,6 +1168,29 @@ func (u *User) changePassword(mobile string, rawPassword string) bool {
 
 }
 
+func handleMobile(m string) string {
+	var number string
+
+	if strings.HasPrefix(m, "966") {
+		number = "00" + m
+		log.Printf("number in 966 is: %v", number)
+		return number
+	}
+	if !strings.HasPrefix(m, "00966") {
+		if strings.HasPrefix(m, "0") {
+			number = "00966" + m[1:]
+			log.Print(m[1:])
+		} else {
+			number = "00966" + m
+			log.Print(number)
+		}
+		return number
+	}
+
+	return m
+
+}
+
 func (u *User) getPassword(id int) (string, error) {
 
 	//TODO update all queries to use Get for single result and select from multiple results
@@ -1186,27 +1209,13 @@ func (u *User) sendSms(otp string) error {
 		return errors.New("mobile_not_provided")
 	}
 
-	var number string
-	old := u.Mobile
-
-	if !strings.HasSuffix(u.Mobile, "00966") {
-		if strings.HasSuffix(u.Mobile, "0") {
-			number = "00966" + u.Mobile[1:]
-		} else {
-			number = "00966" + u.Mobile
-		}
-	} else {
-		number = u.Mobile
-	}
-
-	// fixing mobile number here..
-	u.Mobile = number
+	mm := handleMobile(u.Mobile)
 
 	v := url.Values{}
 	v.Add("username", "SEARCHFORME")
 	v.Add("password", "a@2092002")
 	v.Add("sender", "SEARCHFORMY")
-	v.Add("numbers", u.Mobile)
+	v.Add("numbers", mm)
 	v.Add("message", otp)
 	v.Add("return", "json")
 	v.Add("unicode", "E")
@@ -1222,14 +1231,11 @@ func (u *User) sendSms(otp string) error {
 
 	// remove this part
 
-	// fixing mobile number here..
-	u.Mobile = number
-
 	vv := url.Values{}
 	vv.Add("username", "SEARCHFORME")
 	vv.Add("password", "a@2092002")
 	vv.Add("sender", "SEARCHFORMY")
-	vv.Add("numbers", old)
+	vv.Add("numbers", mm[2:])
 	vv.Add("message", otp)
 	vv.Add("return", "json")
 	vv.Add("unicode", "E")
