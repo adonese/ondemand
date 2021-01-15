@@ -1169,25 +1169,27 @@ func (u *User) changePassword(mobile string, rawPassword string) bool {
 }
 
 func handleMobile(m string) string {
-	var number string
 
 	if strings.HasPrefix(m, "966") {
-		number = "00" + m
-		log.Printf("number in 966 is: %v", number)
-		return number
-	}
-	if !strings.HasPrefix(m, "00966") {
-		if strings.HasPrefix(m, "0") {
-			number = "00966" + m[1:]
-			log.Print(m[1:])
-		} else {
-			number = "00966" + m
-			log.Print(number)
+
+		d := m[3:]
+		if strings.HasPrefix(d, "0") {
+			return "966" + d[1:]
 		}
-		return number
+		return m
 	}
 
-	return m
+	if strings.HasPrefix(m, "00966") {
+		d := m[5:]
+		if strings.HasPrefix(d, "0") {
+			return "966" + d[1:]
+		}
+		return m[2:]
+	} else if strings.HasPrefix(m, "0") {
+		return "966" + m[1:]
+	} else {
+		return "966" + m
+	}
 
 }
 
@@ -1228,24 +1230,7 @@ func (u *User) sendSms(otp string) error {
 		log.Printf("The error is: %v", err)
 	}
 	log.Printf("The response body is: %v", res)
-
-	// remove this part
-
-	vv := url.Values{}
-	vv.Add("username", "SEARCHFORME")
-	vv.Add("password", "a@2092002")
-	vv.Add("sender", "SEARCHFORMY")
-	vv.Add("numbers", mm[2:])
-	vv.Add("message", otp)
-	vv.Add("return", "json")
-	vv.Add("unicode", "E")
-	uri2 := SMS_GATEWAY + "?" + v.Encode()
-	log.Print(uri2)
-	http.Get(uri2)
-	//
-
 	return nil
-
 }
 
 func (u *User) otpPassword(w http.ResponseWriter, r *http.Request) {

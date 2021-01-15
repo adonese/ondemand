@@ -631,10 +631,12 @@ func Test_handleMobile(t *testing.T) {
 		args args
 		want string
 	}{
-		{"testing with zero", args{"051234"}, "0096651234"},
-		{"testing no zero", args{"51234"}, "0096651234"},
-		{"testing with 966", args{"0096651234"}, "0096651234"},
-		{"testing with 966", args{"96651234"}, "0096651234"},
+		{"testing with zero", args{"051234"}, "96651234"},
+		{"testing no zero", args{"51234"}, "96651234"},
+		{"testing with 00966", args{"0096651234"}, "96651234"},
+		{"testing with 966", args{"96651234"}, "96651234"},
+		{"testing with 9660", args{"966051234"}, "96651234"},
+		{"testing with 009660", args{"00966051234"}, "96651234"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
