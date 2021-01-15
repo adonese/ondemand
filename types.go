@@ -975,10 +975,16 @@ func (u *User) getTags() (string, []interface{}, error) {
 		ss = ss.Set("score", u.Score)
 	}
 	if u.Latitude != nil {
-		ss = ss.Set("latitude", u.Latitude)
+		if *u.Latitude != 0 {
+			ss = ss.Set("latitude", u.Latitude)
+		}
+
 	}
 	if u.Longitude != nil {
-		ss = ss.Set("longitude", u.Longitude)
+		if *u.Longitude != 0 {
+			ss = ss.Set("longitude", u.Longitude)
+		}
+
 	}
 
 	ss = ss.Where("id = ?", u.ID)
