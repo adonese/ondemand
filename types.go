@@ -1709,6 +1709,7 @@ func (u *User) getByIDHandler(w http.ResponseWriter, r *http.Request) {
 type Provider struct {
 	Score2    int     `json:"score2" db:"score2"`
 	Haversine float64 `json:"distance"`
+	Count     int     `json:"count" db:"count"`
 	db        *sqlx.DB
 	User
 }
@@ -1718,7 +1719,8 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 
 	// here is the real shit
 	// ok check is_active = 1
-	if err := p.db.Select(&users, `select u.* from users u
+	if err := p.db.Select(&users, `select u.*, v.count from users u
+	join views v on v.user_id = u.id
 	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1 and u.latitude not null and u.longitude not null
 	order by score desc`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
