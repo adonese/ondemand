@@ -147,8 +147,8 @@ func main() {
 	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
-
 	r.Handle("/admin/providers", http.HandlerFunc(userField.getProvidersHandler))
+
 	r.Handle("/admin/users", http.HandlerFunc(userField.getUsersHandler))
 	r.Handle("/admin/providers/{id}", http.HandlerFunc(userField.getByIDHandler))
 	r.Handle("/admin/users/{id}", http.HandlerFunc(userField.getByIDHandler))

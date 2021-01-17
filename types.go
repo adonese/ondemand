@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -201,19 +200,34 @@ type CustomerProvider struct {
 
 //Order
 type Order struct {
-	ID          int          `json:"id" db:"id"`
-	UserID      int          `json:"user_id" db:"user_id"`
-	ProviderID  int          `json:"provider_id" db:"provider_id"`
-	Status      bool         `json:"status" db:"status"`
-	CreatedAt   sql.NullTime `db:"created_at" json:"created_at"`
-	OrderUUID   string       `json:"uuid" db:"uuid"`
+	ID          int        `json:"id,omitempty" db:"id"`
+	UserID      int        `json:"user_id,omitempty" db:"user_id"`
+	ProviderID  int        `json:"provider_id,omitempty" db:"provider_id"`
+	Status      bool       `json:"status,omitempty" db:"status"`
+	CreatedAt   *time.Time `db:"created_at,omitempty" json:"created_at"`
+	OrderUUID   string     `json:"uuid,omitempty" db:"uuid"`
 	db          *sqlx.DB
-	IsPending   bool   `json:"is_pending" db:"is_pending"`
-	Description string `json:"description" db:"description"`
-	Category    int    `json:"category" db:"category"`
+	IsPending   bool   `json:"is_pending,omitempty" db:"is_pending"`
+	Description string `json:"description,omitempty" db:"description"`
+	Category    int    `json:"category,omitempty" db:"category"`
 	Provider    *User  `json:"provider,omitempty"`
 	UserProfile *User  `json:"user,omitempty"` //*nice*
 	CustomerProvider
+	CustomerName string `json:"customer_name,omitempty" db:"customer_name"`
+	ProviderName string `json:"provider_name,omitempty" db:"provider_name"`
+}
+
+type AdminOrder struct {
+	ID           int        `json:"id,omitempty" db:"id"`
+	Status       bool       `json:"status,omitempty" db:"status"`
+	CreatedAt    *time.Time `db:"created_at,omitempty" json:"created_at"`
+	OrderUUID    string     `json:"uuid,omitempty" db:"uuid"`
+	db           *sqlx.DB
+	IsPending    bool   `json:"is_pending,omitempty" db:"is_pending"`
+	Description  string `json:"description,omitempty" db:"description"`
+	Category     int    `json:"category,omitempty" db:"category"`
+	CustomerName string `json:"customer_name,omitempty" db:"customer_name"`
+	ProviderName string `json:"provider_name,omitempty" db:"provider_name"`
 }
 
 //Image stored in fs
@@ -279,9 +293,14 @@ func (i *Image) store() (string, error) {
 
 }
 
-func (c *Order) all() []Order {
-	var orders []Order
-	c.db.Select(&orders, "select * from orders")
+func (c *Order) all() []AdminOrder {
+	var orders []AdminOrder
+	if err := c.db.Select(&orders, `select orders.id, orders.created_at, orders.description, orders.uuid, u.fullname as customer_name, uu.fullname as provider_name from orders
+	join users u on u.id = orders.user_id
+	join users uu on uu.id = orders.provider_id`); err != nil {
+		log.Printf("error in orders: %v", err)
+		return nil
+	}
 	return orders
 }
 
