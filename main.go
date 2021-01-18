@@ -52,6 +52,7 @@ create table issues (
 	created_at DATE DEFAULT (datetime('now','localtime'))
 );
 
+
 create table pushes (
 	id integer not null PRIMARY key,
 	user_id integer not null,

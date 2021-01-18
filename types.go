@@ -833,6 +833,7 @@ type User struct {
 	Latitude           *float64   `json:"latitude" db:"latitude"`
 	Longitude          *float64   `json:"longitude" db:"longitude"`
 	MobileChecked      *bool      `json:"mobile_checked" db:"mobile_checked"`
+	DeviceID           string     `json:"device_id"`
 	db                 *sqlx.DB
 }
 
@@ -1104,6 +1105,14 @@ func (u *User) saveProvider() error {
 	} else {
 		id, _ := n.LastInsertId()
 		u.ID = int(id)
+	}
+	return nil
+}
+
+func (u *User) savePush() error {
+	if _, err := u.db.Exec("insert into pushes(user_id, onesignal_id) values(?, ?)", u.ID, u.DeviceID); err != nil {
+		log.Printf("error in push: %v", err)
+		return err
 	}
 	return nil
 }
@@ -2178,6 +2187,8 @@ func (us *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(vErr.toJson())
 			return
 		}
+		// save the push
+		user.savePush()
 	} else {
 		if err := user.saveUser(); err != nil {
 			vErr := errorHandler{Code: "db_err", Message: err.Error()}
