@@ -228,6 +228,8 @@ type AdminOrder struct {
 	Category     int    `json:"category,omitempty" db:"category"`
 	CustomerName string `json:"customer_name,omitempty" db:"customer_name"`
 	ProviderName string `json:"provider_name,omitempty" db:"provider_name"`
+	ProviderCity string `json:"provider_city,omitempty" db:"provider_city"`
+	CustomerCity string `json:"customer_city,omitempty" db:"customer_city"`
 }
 
 //Image stored in fs
@@ -293,11 +295,11 @@ func (i *Image) store() (string, error) {
 
 }
 
-func (c *Order) all() []AdminOrder {
+func (c *Order) all(sort string) []AdminOrder {
 	var orders []AdminOrder
-	if err := c.db.Select(&orders, `select orders.id, orders.created_at, orders.description, orders.uuid, u.fullname as customer_name, uu.fullname as provider_name from orders
+	if err := c.db.Select(&orders, `select orders.id, orders.category, orders.created_at, orders.description, orders.uuid, u.fullname as customer_name, uu.fullname as provider_name, uu.city as provider_city, u.city as customer_city from orders
 	join users u on u.id = orders.user_id
-	join users uu on uu.id = orders.provider_id`); err != nil {
+	join users uu on uu.id = orders.provider_id order by uu.city`); err != nil {
 		log.Printf("error in orders: %v", err)
 		return nil
 	}
@@ -547,9 +549,14 @@ func (c *Order) getOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Order) adminOrdersHandler(w http.ResponseWriter, r *http.Request) {
 
+	// sort and filtering
+	// filter=%7B%7D&order=ASC&page=1&perPage=10&sort=uuid
+
+	sort := r.URL.Query().Get("sort")
+
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
-	res := c.all()
+	res := c.all(sort)
 	w.Header().Add("X-Total-Count", toString(len(res)))
 	w.WriteHeader(http.StatusOK)
 
@@ -584,11 +591,9 @@ func (c *Order) byID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
-	id := r.URL.Query().Get("uuid")
-	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	vars := mux.Vars(r)
+
+	id := toInt(vars["id"])
 
 	var res OrdersUsers
 
@@ -833,7 +838,7 @@ type User struct {
 	Latitude           *float64   `json:"latitude" db:"latitude"`
 	Longitude          *float64   `json:"longitude" db:"longitude"`
 	MobileChecked      *bool      `json:"mobile_checked" db:"mobile_checked"`
-	DeviceID           string     `json:"device_id"`
+	DeviceID           *string    `json:"device_id" db:"device_id"`
 	db                 *sqlx.DB
 }
 
@@ -1085,7 +1090,7 @@ func (u *User) saveUser() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path) values(:username, :mobile, :password, :fullname, :is_provider, :path)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, city) values(:username, :mobile, :password, :fullname, :is_provider, :path, :city)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
@@ -2434,6 +2439,16 @@ func getCity(lat, lng float64) (string, error) {
 	}
 	return d.City, nil
 
+}
+
+func sendPushes(w http.ResponseWriter, r *http.Request) {
+	// onesignal app key: cec9979b-de9c-47f6-ad3d-5ee314614a9f
+	// api key: YTk4NDU4Y2YtYjZiNS00ZTY1LWFlMGYtZGRlYTUzZWQ5Zjc4
+	/*
+
+		// we use this request for signal stuff
+			curl --include --request POST --header "Content-Type: application/json; charset=utf-8" -H "Authorization: Basic YTk4NDU4Y2YtYjZiNS00ZTY1LWFlMGYtZGRlYTUzZWQ5Zjc4" -d '{ "app_id": "cec9979b-de9c-47f6-ad3d-5ee314614a9f", "include_player_ids": ["9c512b96-8d7b-4942-9452-ba515016b8a8"], "channel_for_external_user_ids": "push", "data": {"foo": "bar"}, "contents": {"en": "it works shdeeeeed!"} }' https://onesignal.com/api/v1/notifications
+	*/
 }
 
 var (
