@@ -839,7 +839,7 @@ type User struct {
 	Longitude          *float64   `json:"longitude" db:"longitude"`
 	MobileChecked      *bool      `json:"mobile_checked" db:"mobile_checked"`
 	DeviceID           *string    `json:"device_id" db:"device_id"`
-	IsDisabled         *bool      `json:"is_disabled" db:"is_disabled"`
+	IsDisabled         *bool      `json:"is_enabled" db:"is_enabled"`
 	db                 *sqlx.DB
 }
 
@@ -951,7 +951,7 @@ func (u *User) getAdminTags() (string, []interface{}, error) {
 		ss = ss.Set("mobile_checked", u.MobileChecked)
 	}
 	if u.IsDisabled != nil {
-		ss = ss.Set("is_disabled", u.IsDisabled)
+		ss = ss.Set("is_enabled", u.IsDisabled)
 	}
 
 	ss = ss.Set("is_provider", u.IsProvider)
@@ -1758,7 +1758,7 @@ func (p *Provider) getProviders(id int) ([]Provider, error) {
 	// ok check is_active = 1
 	if err := p.db.Select(&users, `select u.*, v.count from users u
 	left join views v on v.user_id = u.id
-	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1 and is_disabled = 0 and u.latitude not null and u.longitude not null
+	join userservices us on us.user_id = u.id where us.service_id = ? and is_active = 1 and is_enabled = 1 and u.latitude not null and u.longitude not null
 	order by score desc`, id); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return nil, err
