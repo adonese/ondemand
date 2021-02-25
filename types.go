@@ -299,7 +299,7 @@ func (c *Order) all(sort string) []AdminOrder {
 	var orders []AdminOrder
 	if err := c.db.Select(&orders, `select orders.id, orders.category, orders.created_at, orders.description, orders.uuid, u.fullname as customer_name, uu.fullname as provider_name, uu.city as provider_city, u.city as customer_city from orders
 	join users u on u.id = orders.user_id
-	join users uu on uu.id = orders.provider_id order by uu.city`); err != nil {
+	join users uu on uu.id = orders.provider_id order`); err != nil {
 		log.Printf("error in orders: %v", err)
 		return nil
 	}
