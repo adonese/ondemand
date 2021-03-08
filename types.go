@@ -930,6 +930,9 @@ func (u *User) getAdminTags() (string, []interface{}, error) {
 		}
 
 	}
+	if u.Whatsapp != nil {
+		ss = ss.Set("whatsapp", u.Whatsapp)
+	}
 	if u.ImagePath != nil {
 		log.Printf("the getTags image path is: %v", *u.ImagePath)
 		ss = ss.Set("path", u.ImagePath)
