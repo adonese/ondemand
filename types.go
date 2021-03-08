@@ -1552,6 +1552,7 @@ func (u *User) getProvidersWithViews() ([]UserViews, error) {
 		return nil, err
 	}
 
+	// this is so fucked up
 	for _, v := range users {
 		if v.Whatsapp != nil {
 			*v.Whatsapp = fixNumbers(*v.Whatsapp)
@@ -1842,6 +1843,16 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(vErr.toJson())
 		return
+	}
+
+	for _, vv := range data {
+		if vv.Whatsapp != nil {
+			if strings.HasPrefix(*vv.Whatsapp, "966") || strings.HasPrefix(*vv.Whatsapp, "00966") || strings.HasPrefix(*vv.Whatsapp, "+966") {
+				continue
+			} else {
+				*vv.Whatsapp = "+966" + *vv.Whatsapp
+			}
+		}
 	}
 
 	var prov []Provider
