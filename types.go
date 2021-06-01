@@ -1271,8 +1271,14 @@ func (u *User) sendSms(otp string) error {
 	v.Add("unicode", "E")
 
 	uri := SMS_GATEWAY + "?" + v.Encode()
+
 	log.Print(uri)
-	res, err := http.Get(uri)
+
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	res, err := client.Get(uri)
 	res.Close = true
 
 	if err != nil {
