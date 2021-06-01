@@ -271,6 +271,8 @@ func (i *Image) store() (string, error) {
 		return "", err
 	}
 
+	defer f.Close() // This fucked us so badly!
+
 	switch ext {
 	case "png":
 		img, err = png.Decode(bytes.NewReader(r))
