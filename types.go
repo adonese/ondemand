@@ -1273,6 +1273,7 @@ func (u *User) sendSms(otp string) error {
 	uri := SMS_GATEWAY + "?" + v.Encode()
 	log.Print(uri)
 	res, err := http.Get(uri)
+	res.Close = true
 
 	if err != nil {
 		log.Printf("The error is: %v", err)
