@@ -1876,6 +1876,14 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 		return prov[i].Haversine < prov[j].Haversine
 	})
 
+	// just go in here and any value that is more than 60 make it LESS.
+
+	for _, v := range prov {
+		if v.Haversine > 60 {
+			v.Haversine = 100
+		}
+	}
+
 	mData := make(map[string]interface{})
 	mData["result"] = prov
 	w.Header().Add("X-Total-Count", toString(len(prov)))
