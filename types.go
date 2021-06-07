@@ -1880,7 +1880,7 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 
 	for k := range prov {
 		if prov[k].Haversine > 60 {
-			prov[k].Haversine = 100
+			prov[k].Haversine = 100.0001
 
 		}
 		log.Printf("The distance is: %v", prov[k].Haversine)
