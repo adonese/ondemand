@@ -1878,10 +1878,12 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 
 	// just go in here and any value that is more than 60 make it LESS.
 
-	for _, v := range prov {
-		if v.Haversine > 60 {
-			v.Haversine = 100
+	for k := range prov {
+		if prov[k].Haversine > 60 {
+			prov[k].Haversine = 100
+
 		}
+		log.Printf("The distance is: %v", prov[k].Haversine)
 	}
 
 	mData := make(map[string]interface{})
