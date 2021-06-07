@@ -1879,8 +1879,9 @@ func (p *Provider) getProvidersWithScoreHandler(w http.ResponseWriter, r *http.R
 	// just go in here and any value that is more than 60 make it LESS.
 
 	for k := range prov {
+		log.Printf("The data is: %v", prov[k].Haversine)
 		if prov[k].Haversine > 60 {
-			prov[k].Haversine = 100.0001
+			prov[k].Haversine = 6000.0001
 
 		}
 		log.Printf("The distance is: %v", prov[k].Haversine)
