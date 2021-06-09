@@ -1550,12 +1550,14 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
-func (u *User) getProvidersWithViews() ([]UserViews, error) {
+func (u *User) getProvidersWithViews(id int) ([]UserViews, error) {
 	var users []UserViews
 
+	limit := 100
+	page := id * limit
 	// now we ought to fix this one
 	if err := u.db.Select(&users, `select u.*, v.count from users u
-	left join views v on v.user_id = u.id where u.is_provider = 1`); err != nil {
+	left join views v on v.user_id = u.id where u.is_provider = 1 and id >= ? LIMIT ?`, page, limit); err != nil {
 
 		log.Printf("Error in DB: %v", err)
 		return nil, err
@@ -1584,6 +1586,20 @@ func (u *User) getUsers() ([]User, error) {
 	return users, nil
 }
 
+func (u *User) getAdminUsers(id int) ([]User, error) {
+	var users []User
+
+	// now we ought to fix this one
+	limit := 50
+	starts := id * limit
+	if err := u.db.Select(&users, "select * from users where is_provider = 0 and id >= ? limit ?", starts, limit); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return nil, err
+	}
+	return users, nil
+}
+
 func (u *User) getProvidersByID(id int) (User, error) {
 	var user User
 
@@ -1601,7 +1617,15 @@ func (u *User) getProvidersByID(id int) (User, error) {
 func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		users, err := u.getUsers()
+
+		p := r.URL.Query().Get("page")
+		start := r.URL.Query().Get("_start")
+
+		page, _ := strconv.Atoi(p)
+		if start != "" {
+			page = 0
+		}
+		users, err := u.getAdminUsers(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
@@ -1625,7 +1649,14 @@ type UserViews struct {
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		users, err := u.getProvidersWithViews()
+		p := r.URL.Query().Get("page")
+		start := r.URL.Query().Get("_start")
+
+		page, _ := strconv.Atoi(p)
+		if start != "" {
+			page = 0
+		}
+		users, err := u.getProvidersWithViews(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
