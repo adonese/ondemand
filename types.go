@@ -1553,7 +1553,7 @@ func (u *User) getProviders() ([]User, error) {
 func (u *User) getProvidersWithViews(id int) ([]UserViews, error) {
 	var users []UserViews
 
-	limit := 100
+	limit := 50
 	page := id * limit
 	// now we ought to fix this one
 	if err := u.db.Select(&users, `select u.*, v.count from users u
@@ -1618,13 +1618,10 @@ func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
 
-		p := r.URL.Query().Get("page")
 		start := r.URL.Query().Get("_start")
 
-		page, _ := strconv.Atoi(p)
-		if start != "" {
-			page = 0
-		}
+		page, _ := strconv.Atoi(start)
+
 		users, err := u.getAdminUsers(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
@@ -1649,13 +1646,10 @@ type UserViews struct {
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		p := r.URL.Query().Get("page")
-		start := r.URL.Query().Get("_start")
 
-		page, _ := strconv.Atoi(p)
-		if start != "" {
-			page = 0
-		}
+		start := r.URL.Query().Get("_start")
+		page, _ := strconv.Atoi(start)
+
 		users, err := u.getProvidersWithViews(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
