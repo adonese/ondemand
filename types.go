@@ -1550,38 +1550,64 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
-func (u *User) getProvidersWithViews() ([]UserViews, error) {
+func (u *User) getProvidersWithViews(page int) ([]UserViews, int, error) {
 	var users []UserViews
 
 	// now we ought to fix this one
 	if err := u.db.Select(&users, `select u.*, v.count from users u
-	left join views v on v.user_id = u.id where u.is_provider = 1`); err != nil {
+	left join views v on v.user_id = u.id where u.is_provider = 1 order by u.id desc`); err != nil {
 
 		log.Printf("Error in DB: %v", err)
-		return nil, err
+		return nil, 0, err
+	}
+	var count int
+	if err := u.db.Get(&count, "select count(*) from users where is_provider = 1"); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return nil, count, err
+	}
+	// NOW here is the thing, starts at 10, and limit to the rest
+	if len(users) <= 10 {
+		return users, count, nil
+	} else {
+		return users[page*10 : page*10+11], count, nil
 	}
 
 	// this is so fucked up
 	for _, v := range users {
 		if v.Whatsapp != nil {
-			*v.Whatsapp = fixNumbers(*v.Whatsapp)
+			*v.Whatsapp = fixNumbers(*v.Whatsapp) // BUG(adonese)
 		}
 
 	}
 
-	return users, nil
+	return users, 0, nil
 }
 
-func (u *User) getUsers() ([]User, error) {
+func (u *User) getUsers(page int) ([]User, int, error) {
 	var users []User
 
+	log.Printf("The page is: %v", page)
+
 	// now we ought to fix this one
-	if err := u.db.Select(&users, "select * from users where is_provider = 0"); err != nil {
+	if err := u.db.Select(&users, "select * from users where is_provider = 0 order by id desc"); err != nil {
 
 		log.Printf("Error in DB: %v", err)
-		return nil, err
+		return nil, 0, err
 	}
-	return users, nil
+	var count int
+	if err := u.db.Get(&count, "select count(*) from users where is_provider = 0"); err != nil {
+
+		log.Printf("Error in DB: %v", err)
+		return nil, count, err
+	}
+	// NOW here is the thing, starts at 10, and limit to the rest
+	if len(users) <= 10 {
+		return users, count, nil
+	} else {
+		return users[page*10 : page*10+11], count, nil
+	}
+
 }
 
 func (u *User) getProvidersByID(id int) (User, error) {
@@ -1601,14 +1627,24 @@ func (u *User) getProvidersByID(id int) (User, error) {
 func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		users, err := u.getUsers()
+		// compute for start and end and get results accordingly.
+
+		e := r.URL.Query().Get("_end")
+		end, _ := strconv.Atoi(e)
+
+		if end == 0 {
+			end = 10
+		}
+		page := end / 10
+
+		users, count, err := u.getUsers(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
-		w.Header().Add("X-Total-Count", toString(len(users)))
+		w.Header().Add("X-Total-Count", toString(count))
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(users))
 	}
@@ -1625,14 +1661,22 @@ type UserViews struct {
 func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
-		users, err := u.getProvidersWithViews()
+
+		e := r.URL.Query().Get("_end")
+		end, _ := strconv.Atoi(e)
+
+		if end == 0 {
+			end = 10
+		}
+		page := end / 10
+		users, count, err := u.getProvidersWithViews(page)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
-		w.Header().Add("X-Total-Count", toString(len(users)))
+		w.Header().Add("X-Total-Count", toString(count))
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(users))
 	}
