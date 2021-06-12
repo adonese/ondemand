@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
 
 var stmt = `
@@ -114,6 +114,15 @@ func main() {
 
 	r := mux.NewRouter()
 
+	// //TODO handle position in orders/request
+	// my := func(origin string) bool {
+	// 	return true
+	// }
+
+	// corsHandler := cors.New(cors.Options{Debug: true,
+	// 	AllowOriginFunc: my,
+	// 	AllowedOrigins:  []string{"*"}, ExposedHeaders: []string{"X-Total-Count"}, AllowedMethods: []string{"GET", "POST", "PUT"}}).Handler(r)
+
 	r.Handle("/login", http.HandlerFunc(userField.login))
 	r.Handle("/register", http.HandlerFunc(userField.registerHandler))
 	r.Handle("/otp", http.HandlerFunc(userField.otpHander))
@@ -168,9 +177,6 @@ func main() {
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
-
-	//TODO handle position in orders/request
-
-	corsHandler := cors.New(cors.Options{ExposedHeaders: []string{"X-Total-Count"}, AllowedMethods: []string{"GET", "POST", "PUT"}}).Handler(r)
-	log.Fatal(http.ListenAndServe(":6662", corsHandler))
+	c := handlers.CORS(handlers.AllowedHeaders([]string{"X-Total-Count", "Content-Type", "authorization"}), handlers.AllowedMethods([]string{"GET", "HEAD", "POST"}), handlers.AllowedOrigins([]string{"*"}))
+	log.Fatal(http.ListenAndServe(":6662", c(r)))
 }

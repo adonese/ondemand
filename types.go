@@ -1550,14 +1550,13 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
-func (u *User) getProvidersWithViews(id int) ([]UserViews, error) {
+func (u *User) getProvidersWithViews(id, end int) ([]UserViews, error) {
 	var users []UserViews
 
-	limit := 50
-	page := id * limit
+	limit := id + end
 	// now we ought to fix this one
 	if err := u.db.Select(&users, `select u.*, v.count from users u
-	left join views v on v.user_id = u.id where u.is_provider = 1 and id >= ? LIMIT ?`, page, limit); err != nil {
+	left join views v on v.user_id = u.id where u.is_provider = 1 and id >= ? LIMIT ?`, id, limit); err != nil {
 
 		log.Printf("Error in DB: %v", err)
 		return nil, err
@@ -1586,18 +1585,22 @@ func (u *User) getUsers() ([]User, error) {
 	return users, nil
 }
 
-func (u *User) getAdminUsers(id int) ([]User, error) {
+func (u *User) getAdminUsers(id int) ([]User, int, error) {
 	var users []User
 
-	// now we ought to fix this one
-	limit := 50
-	starts := id * limit
-	if err := u.db.Select(&users, "select * from users where is_provider = 0 and id >= ? limit ?", starts, limit); err != nil {
+	if err := u.db.Select(&users, "select * from users where is_provider = 0  order by id limit ?", 50); err != nil {
 
 		log.Printf("Error in DB: %v", err)
-		return nil, err
+		return nil, 0, err
 	}
-	return users, nil
+	var count int
+	if err := u.db.Get(&count, "select count(*) as count from users where is_provider = 0"); err != nil {
+		log.Printf("Error in DB: %v", err)
+		return nil, 0, err
+	}
+
+	// users = users[50:]
+	return users, count, nil
 }
 
 func (u *User) getProvidersByID(id int) (User, error) {
@@ -1618,18 +1621,18 @@ func (u *User) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 	if r.Method == "GET" {
 
-		start := r.URL.Query().Get("_start")
+		current := r.URL.Query().Get("current")
 
-		page, _ := strconv.Atoi(start)
+		s, _ := strconv.Atoi(current)
 
-		users, err := u.getAdminUsers(page)
+		users, count, err := u.getAdminUsers(s)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write(vErr.toJson())
 			return
 		}
-		w.Header().Add("X-Total-Count", toString(len(users)))
+		w.Header().Add("X-Total-Count", toString(count))
 		w.WriteHeader(http.StatusOK)
 		w.Write(marshal(users))
 	}
@@ -1648,9 +1651,11 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 
 		start := r.URL.Query().Get("_start")
-		page, _ := strconv.Atoi(start)
+		end := r.URL.Query().Get("_end")
+		s, _ := strconv.Atoi(start)
+		e, _ := strconv.Atoi(end)
 
-		users, err := u.getProvidersWithViews(page)
+		users, err := u.getProvidersWithViews(s, e)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
