@@ -1550,21 +1550,37 @@ func (u *User) getProviders() ([]User, error) {
 	return users, nil
 }
 
-func (u *User) getProvidersWithViews(page int) ([]UserViews, int, error) {
+func (u *User) getProvidersWithViews(page int, query string) ([]UserViews, int, error) {
 	var users []UserViews
 
 	// now we ought to fix this one
-	if err := u.db.Select(&users, `select u.*, v.count from users u
-	left join views v on v.user_id = u.id where u.is_provider = 1 order by u.id desc`); err != nil {
-
-		log.Printf("Error in DB: %v", err)
-		return nil, 0, err
+	if query == "" {
+		if err := u.db.Select(&users, `select u.*, v.count from users u
+		left join views v on v.user_id = u.id where u.is_provider = 1 order by u.id desc`); err != nil {
+	
+			log.Printf("Error in DB: %v", err)
+			return []UserViews{}, 0, err
+		}
+	}else{
+		like := "%" + query + "%"
+		if err := u.db.Select(&users, `select u.*, v.count from users u
+		left join views v on v.user_id = u.id where u.is_provider = 1 and u.mobile like ? or u.fullname like ? order by u.id desc`, like, like); err != nil {
+	
+			log.Printf("Error in DB: %v", err)
+			return []UserViews{}, 0, err
+		}else{
+			log.Printf("-- why am i here!", users)
+			return users, len(users), nil
+		}
 	}
+
+	log.Print("why am i here😤╰(*°▽°*)╯")
+
 	var count int
 	if err := u.db.Get(&count, "select count(*) from users where is_provider = 1"); err != nil {
 
 		log.Printf("Error in DB: %v", err)
-		return nil, count, err
+		return []UserViews{}, count, err
 	}
 	// NOW here is the thing, starts at 10, and limit to the rest
 	if len(users) <= 10 {
@@ -1669,7 +1685,11 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 			end = 10
 		}
 		page := end / 10
-		users, count, err := u.getProvidersWithViews(page)
+		
+		q := r.URL.Query().Get("q")
+		log.Printf("The query is: %v", q)
+
+		users, count, err := u.getProvidersWithViews(page, q)
 		if err != nil {
 			vErr := errorHandler{Code: "not_found", Message: err.Error()}
 			w.WriteHeader(http.StatusBadRequest)
