@@ -80,6 +80,14 @@ create table suggestions (
 		suggestion text not null,
 		created_at DATE DEFAULT (datetime('now','localtime'))
 	);
+
+
+	create table prices (
+		id integer not null PRIMARY key,
+		description text not null,
+		created_at DATE DEFAULT (datetime('now','localtime')),
+		amount real not null
+	);
 `
 
 var (

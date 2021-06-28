@@ -1808,7 +1808,7 @@ func (p Price) write() (bool, error) {
 	return true, nil
 }
 
-func (price *Price) pricesHandler(w http.ResponseWriter, r *http.Request) {
+func (price Price) pricesHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" {
 		d := price.getAll()
@@ -1832,6 +1832,8 @@ func (price *Price) pricesHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(marshal(verr))
 		return
 	}
+
+	log.Printf("The price is: %v", price)
 
 	if r.Method == "POST" {
 
