@@ -91,6 +91,7 @@ var (
 	Sugg      Suggestion
 	pus       Pushes
 	image     Image
+	price     Price
 )
 
 var db, _ = getDB("test.db")
@@ -98,6 +99,7 @@ var accept = make(chan struct{ id int }, 256)
 
 func init() {
 
+	price.db = db
 	userField.db = db
 	o.db = db
 	i.db = db
@@ -130,6 +132,7 @@ func main() {
 	r.Handle("/orders/provider", http.HandlerFunc(o.setProviderHandler))
 	r.Handle("/orders/accept", http.HandlerFunc(o.updateOrder))
 	r.Handle("/view", http.HandlerFunc(userField.incrHandler))
+	r.Handle("/prices", http.HandlerFunc(price.pricesHandler))
 
 	r.Handle("/providers", http.HandlerFunc(p.getProvidersWithScoreHandler))
 

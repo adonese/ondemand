@@ -1557,18 +1557,18 @@ func (u *User) getProvidersWithViews(page int, query string) ([]UserViews, int, 
 	if query == "" {
 		if err := u.db.Select(&users, `select u.*, v.count from users u
 		left join views v on v.user_id = u.id where u.is_provider = 1 order by u.id desc`); err != nil {
-	
+
 			log.Printf("Error in DB: %v", err)
 			return []UserViews{}, 0, err
 		}
-	}else{
+	} else {
 		like := "%" + query + "%"
 		if err := u.db.Select(&users, `select u.*, v.count from users u
 		left join views v on v.user_id = u.id where u.is_provider = 1 and u.mobile like ? or u.fullname like ? order by u.id desc`, like, like); err != nil {
-	
+
 			log.Printf("Error in DB: %v", err)
 			return []UserViews{}, 0, err
-		}else{
+		} else {
 			log.Printf("-- why am i here!", users)
 			return users, len(users), nil
 		}
@@ -1685,7 +1685,7 @@ func (u *User) getProvidersHandler(w http.ResponseWriter, r *http.Request) {
 			end = 10
 		}
 		page := end / 10
-		
+
 		q := r.URL.Query().Get("q")
 		log.Printf("The query is: %v", q)
 
@@ -1757,6 +1757,117 @@ func (u *User) incrHandler(w http.ResponseWriter, r *http.Request) {
 		u.incrView(toInt(id))
 		w.WriteHeader(http.StatusOK)
 		return
+	}
+
+}
+
+//Price model for the items alongside their names and descriptions
+type Price struct {
+	Name        string  `json:"name,omitempty" db:"name"`
+	Amount      float32 `json:"amount,omitempty" db:"amount"`
+	Description string  `json:"description,omitempty" db:"description"`
+	ID          int     `json:"id,omitempty" db:"id"`
+	db          *sqlx.DB
+}
+
+func (p Price) getAll() []Price {
+	var prices []Price
+	if err := p.db.Select(&p, "Select * from prices order by id"); err != nil {
+		log.Printf("unable to retrieve prices: %v", err)
+		return prices
+	}
+	return prices
+}
+
+func (p Price) update(id int) (bool, error) {
+
+	if id == 0 || p.Amount == 0 {
+		return false, errors.New("no id")
+	}
+	if _, err := p.db.Exec("update prices set amount = ? where id = ? ", id, p.Amount); err != nil {
+		log.Printf("unable to retrieve prices: %v", err)
+		return false, errors.New("not found")
+	}
+	return true, nil
+}
+
+func (p Price) getID(id int) (Price, error) {
+	var price Price
+	if err := p.db.Get(&p, "Select * from prices where id = ?", id); err != nil {
+		log.Printf("unable to retrieve prices: %v", err)
+		return price, errors.New("not found")
+	}
+	return price, nil
+}
+
+func (p Price) write() (bool, error) {
+	if _, err := p.db.Exec("insert into prices(amount, description) values(?, ?)", p.Amount, p.Description); err != nil {
+		log.Printf("unable to write prices: %v", err)
+		return false, errors.New("not found")
+	}
+	return true, nil
+}
+
+func (price *Price) pricesHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method == "GET" {
+		d := price.getAll()
+		w.WriteHeader(http.StatusOK)
+		w.Write(marshal(d))
+		return
+	}
+
+	res, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		verr := errorHandler{Code: "request err", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+	defer r.Body.Close()
+
+	if err := json.Unmarshal(res, &price); err != nil {
+		verr := errorHandler{Code: "marshalling_err", Message: err.Error()}
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(marshal(verr))
+		return
+	}
+
+	if r.Method == "POST" {
+
+		// write to database
+		if _, err := price.write(); err != nil {
+			verr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		return
+	}
+
+	if r.Method == "PUT" {
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			verr := errorHandler{Code: "no_id", Message: "ID not provided"}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+		}
+
+		userID := toInt(id)
+
+		// proceed to the update
+		if _, err := price.update(userID); err != nil {
+			verr := errorHandler{Code: "db_error", Message: err.Error()}
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(marshal(verr))
+			return
+
+		}
+		w.WriteHeader(http.StatusCreated)
+		return
+
 	}
 
 }
