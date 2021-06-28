@@ -1768,11 +1768,12 @@ type Price struct {
 	Description string  `json:"description,omitempty" db:"description"`
 	ID          int     `json:"id,omitempty" db:"id"`
 	db          *sqlx.DB
+	CreatedAt   string `json:"created_at" db:"created_at"`
 }
 
 func (p Price) getAll() []Price {
 	var prices []Price
-	if err := p.db.Select(&p, "Select * from prices order by id"); err != nil {
+	if err := p.db.Select(&prices, "Select * from prices order by id"); err != nil {
 		log.Printf("unable to retrieve prices: %v", err)
 		return prices
 	}
