@@ -1113,7 +1113,7 @@ func (u *User) saveProvider() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active, city, whatsapp, latitude, longitude) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, :is_active, :city, :whatsapp, :latitude, :longitude)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active, city, whatsapp, latitude, longitude) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, 1, :city, :whatsapp, :latitude, :longitude)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
@@ -2327,6 +2327,7 @@ func (u *User) updateHandler(w http.ResponseWriter, r *http.Request) {
 func (us *User) registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json; charset=utf-8")
 
+	//FIXME(adonese): this is really buggy!
 	user := &User{db: us.db}
 
 	var id string
