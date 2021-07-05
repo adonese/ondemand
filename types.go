@@ -1113,7 +1113,7 @@ func (u *User) saveProvider() error {
 
 	u.db.Exec(stmt)
 
-	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active, city, whatsapp, latitude, longitude) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, :is_active, :city, :whatsapp, :latitude, :longitude)", u); err != nil {
+	if n, err := u.db.NamedExec("insert into users(username, mobile, password, fullname, is_provider, path, description, is_active, city, whatsapp, latitude, longitude) values(:username, :mobile, :password, :fullname, :is_provider, :path, :description, 1, :city, :whatsapp, :latitude, :longitude)", u); err != nil {
 		log.Printf("Error in DB: %v", err)
 		return err
 	} else {
