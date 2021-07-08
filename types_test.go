@@ -646,3 +646,31 @@ func Test_handleMobile(t *testing.T) {
 		})
 	}
 }
+
+func Test_getRanges(t *testing.T) {
+	type args struct {
+		page     uint
+		interval uint
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  uint
+		want1 uint
+	}{
+		{"let us test", args{1, 10}, 0, 10},
+		{"let us test", args{3, 10}, 30, 41},
+		{"let us test", args{4, 10}, 40, 51},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := getRanges(tt.args.page, tt.args.interval)
+			if got != tt.want {
+				t.Errorf("getRanges() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("getRanges() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}

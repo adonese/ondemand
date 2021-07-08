@@ -1569,7 +1569,7 @@ func (u *User) getProvidersWithViews(page int, query string) ([]UserViews, int, 
 			log.Printf("Error in DB: %v", err)
 			return []UserViews{}, 0, err
 		} else {
-			log.Printf("-- why am i here!", users)
+			log.Print("-- why am i here!", users)
 			return users, len(users), nil
 		}
 	}
@@ -1621,9 +1621,21 @@ func (u *User) getUsers(page int) ([]User, int, error) {
 	if len(users) <= 10 {
 		return users, count, nil
 	} else {
-		return users[page*10 : page*10+11], count, nil
+		// this should be: 0:10
+
+		r1, r2 := getRanges(uint(page), 10)
+		log.Printf("The data is: %d - to: %d ", r1, r2)
+		return users[r1:r2], count, nil
 	}
 
+}
+
+func getRanges(page uint, interval uint) (uint, uint) {
+	if page == 1 {
+		return 0, 10
+	} else {
+		return page * interval, page*interval + interval + 1
+	}
 }
 
 func (u *User) getProvidersByID(id int) (User, error) {
