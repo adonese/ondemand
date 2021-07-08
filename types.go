@@ -1586,18 +1586,10 @@ func (u *User) getProvidersWithViews(page int, query string) ([]UserViews, int, 
 	if len(users) <= 10 {
 		return users, count, nil
 	} else {
-		return users[page*10 : page*10+11], count, nil
+		r1, r2 := getRanges(uint(page), 10)
+		return users[r1:r2], count, nil
 	}
 
-	// this is so fucked up
-	for _, v := range users {
-		if v.Whatsapp != nil {
-			*v.Whatsapp = fixNumbers(*v.Whatsapp) // BUG(adonese)
-		}
-
-	}
-
-	return users, 0, nil
 }
 
 func (u *User) getUsers(page int) ([]User, int, error) {
