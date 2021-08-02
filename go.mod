@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/jmoiron/sqlx v1.2.0
+	github.com/jszwec/csvutil v1.5.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.2
 	github.com/pquerna/otp v1.2.0
 	github.com/rs/cors v1.7.0

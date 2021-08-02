@@ -167,6 +167,8 @@ func main() {
 	r.Handle("/admin/orders", http.HandlerFunc(o.adminOrdersHandler))
 	r.Handle("/admin/orders/{id}", http.HandlerFunc(o.byID))
 	r.Handle("/admin/login", http.HandlerFunc(userField.loginAdmin))
+	r.Handle("/export", http.HandlerFunc(userField.export))
+
 	r.Handle("/password_reset", http.HandlerFunc(userField.PasswordReset))
 	r.Handle("/success", http.HandlerFunc(userField.success))
 

@@ -674,3 +674,28 @@ func Test_getRanges(t *testing.T) {
 		})
 	}
 }
+
+func TestUser_getExported(t *testing.T) {
+
+	var testdb, _ = getDB("test.db")
+	user := &User{db: testdb}
+
+	defer testdb.Close()
+
+	tests := []struct {
+		name   string
+		length int
+		want   []byte
+	}{
+		// TODO: Add test cases.
+		{"successful test", 2000, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if got := user.getExported(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("User.getExported() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

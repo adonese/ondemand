@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -28,6 +29,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/jmoiron/sqlx"
+	"github.com/jszwec/csvutil"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -826,14 +828,14 @@ type User struct {
 	Password           string     `db:"password" json:"password"`
 	VerificationNumber *string    `db:"verification_number" json:"verification_number"`
 	IsProvider         bool       `db:"is_provider" json:"is_provider"`
-	Services           []int      `json:"services"`
+	Services           []int      `json:"services" csv:"-"`
 	IsActive           *bool      `json:"is_active" db:"is_active"`
 	Score              int        `json:"score" db:"score"`
 	Description        *string    `json:"description" db:"description"`
 	Channel            *int       `json:"channel"`
 	Image              *string    `json:"image"`
 	ImagePath          *string    `json:"path" db:"path"`
-	ServiceName        []idName   `json:"service_names"`
+	ServiceName        []idName   `json:"service_names" csv:"-"`
 	IsAdmin            bool       `json:"is_admin" db:"is_admin"`
 	City               string     `json:"city" db:"city"`
 	Whatsapp           *string    `json:"whatsapp" db:"whatsapp"`
@@ -2255,6 +2257,32 @@ func (u *User) loginAdmin(w http.ResponseWriter, r *http.Request) {
 	u.ServiceName, _ = u.fetchServices(u.Username)
 
 	w.Write(marshal(u))
+
+}
+
+func (u *User) getExported() []byte {
+
+	var users []User
+	u.db.Select(&users, "Select * from users")
+	// now we need a way to export that
+	data, err := csvutil.Marshal(users)
+	if err != nil {
+		log.Fatalf("There is an error: %v", err)
+	}
+	return data
+}
+
+func (u *User) export(w http.ResponseWriter, r *http.Request) {
+	// read all content (*)
+	// export to csv
+	// download
+	tmp := time.Now().Format(time.RFC3339) + "-export.csv"
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", tmp))
+	w.Header().Set("Content-Type", "application/csv;charset=UTF-8")
+	content := u.getExported()
+	bom := []byte{0xEF, 0xBB, 0xBF}
+
+	w.Write(append(bom, content...))
 
 }
 
